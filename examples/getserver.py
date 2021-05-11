@@ -1,5 +1,4 @@
 import asyncio
-from pprint import pprint
 import logging
 
 import aiohttp
@@ -16,9 +15,8 @@ log.addHandler(handler)
 async def main():
     async with aiohttp.ClientSession() as session:
         client = abm.BattleMetricsClient(session)
-        server = await client.get_server_info(10654566, include_players=True)
-        pprint(server)
-        pprint(server.players)
+        server = await client.get_server_info(1234, include_players=True)
+        print(server)
 
 
 if __name__ == '__main__':
