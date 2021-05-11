@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 import datetime
-from typing import List, Optional
+from typing import Optional, Tuple
 
 from .mixins import DatetimeParser, PayloadIniter
 from .player import Player
@@ -22,7 +22,7 @@ class Server(DatetimeParser, PayloadIniter):
     max_players (int): The maximum number of players the server allows.
     name (str): The server name.
     player_count (int): The number of players in the server.
-    players (list): A list of Player objects. This may be empty if the query
+    players (tuple): A list of Player objects. This may be empty if the query
         did not specify to include player data.
     port (int): The server's port.
     private (bool): Whether the server is private or not.
@@ -41,22 +41,22 @@ class Server(DatetimeParser, PayloadIniter):
         'rank', 'status'
     )
 
-    address: Optional[str] = field(repr=False)
-    country: str = field(repr=False)
-    created_at: datetime.datetime = field(repr=False)
-    details: dict = field(repr=False)
+    address: Optional[str]        = field(hash=False, repr=False)
+    country: str                  = field(hash=False, repr=False)
+    created_at: datetime.datetime = field(hash=False, repr=False)
+    details: dict                 = field(hash=False, repr=False)
     id: int
-    ip: str = field(repr=False)
-    max_players: int = field(repr=False)
-    name: str
-    player_count: int = field(repr=False)
-    players: List[Player] = field(repr=False)
-    port: int = field(repr=False)
-    private: bool = field(repr=False)
-    query_port: int = field(repr=False)
-    rank: int = field(repr=False)
-    status: str = field(repr=False)
-    updated_at: datetime.datetime = field(repr=False)
+    ip: str                       = field(hash=False, repr=False)
+    max_players: int              = field(hash=False, repr=False)
+    name: str                     = field(hash=False)
+    player_count: int             = field(hash=False, repr=False)
+    players: Tuple[Player]        = field(hash=False, repr=False)
+    port: int                     = field(hash=False, repr=False)
+    private: bool                 = field(hash=False, repr=False)
+    query_port: int               = field(hash=False, repr=False)
+    rank: int                     = field(hash=False, repr=False)
+    status: str                   = field(hash=False, repr=False)
+    updated_at: datetime.datetime = field(hash=False, repr=False)
 
     def __init__(self, payload):
         attrs = payload['data']['attributes']
@@ -64,8 +64,6 @@ class Server(DatetimeParser, PayloadIniter):
         super().__setattr__('created_at', self._parse_datetime(attrs['createdAt']))
         super().__setattr__('updated_at', self._parse_datetime(attrs['updatedAt']))
 
-        players = []
-        for item in payload['included']:
-            if item['type'] == 'player':
-                players.append(Player(item))
+        players = tuple(Player(item) for item in payload['included']
+                        if item['type'] == 'player')
         super().__setattr__('players', players)

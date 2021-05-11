@@ -30,13 +30,13 @@ class Player(DatetimeParser, PayloadIniter):
     _init_meta = ({'name': 'first_time', 'path': 'firstTime'},
                   'score', {'name': 'playtime', 'path': 'time'})
 
-    created_at: datetime.datetime = field(repr=False)
-    first_time: bool = field(repr=False)
+    created_at: datetime.datetime = field(hash=False, repr=False)
+    first_time: bool              = field(hash=False, repr=False)
     id: int
-    name: str
-    score: int = field(repr=False)
-    playtime: float = field(repr=False)
-    updated_at: datetime.datetime = field(repr=False)
+    name: str                     = field(hash=False)
+    score: int                    = field(hash=False, repr=False)
+    playtime: float               = field(hash=False, repr=False)
+    updated_at: datetime.datetime = field(hash=False, repr=False)
 
     def __init__(self, payload):
         def flatten_meta():
