@@ -47,8 +47,8 @@ class PayloadIniter:
             mapping:
                 The mapping to follow when extracting attributes from attrs.
             required (bool): If True, all specified attributes must exist.
-                Otherwise, some attributes can be missing from attrs, in
-                which case their corresponding attribute
+                Otherwise, some keys can be missing from attrs, in
+                which case their corresponding attribute is set to None.
 
         Raises:
             KeyError: An attribute specified in mapping was missing from attrs.
@@ -60,7 +60,7 @@ class PayloadIniter:
                     v = v[x]
                 except (KeyError, TypeError) as e:
                     if required:
-                        raise KeyError(f'attrs is missing {x} from {v}') from e
+                        raise KeyError(f'attrs is missing {x!r} from {v!r}') from e
                     return
             return v
 
