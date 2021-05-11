@@ -70,15 +70,19 @@ class BattleMetricsClient:
         self.sleep_on_ratelimit = sleep_on_ratelimit
         self._reqlock = asyncio.Lock()
 
-    async def _request(self, route: _Route):
+    async def _request(self, route: _Route, *, params: Optional[dict] = None):
         headers = {}
         if self.token:
             headers['Authorization'] = f'Bearer {self.token}'
 
+        if params is None:
+            params = {}
+
         async with _MaybeUnlock(self._reqlock) as lock:
             for tries in range(5):
                 async with self.session.request(
-                        route.method, route.url, headers=headers) as r:
+                        route.method, route.url,
+                        headers=headers, params=params) as r:
                     log.debug(f'{route.method} {route.url} returned {r.status}')
                     data = await _json_or_text(r)
 
@@ -101,6 +105,25 @@ class BattleMetricsClient:
 
                     return data
 
-    async def get_server_info(self, server_id: int):
+    async def get_server_info(self, server_id: int, *, include_players=False):
+        """Obtain server info given an ID.
+
+        Args:
+            server_id (int): The server's id.
+            include_players (bool): Whether to also fetch player data.
+                This affects the `players` attribute.
+
+        """
         r = _Route('GET', '/servers/{server_id}', server_id=server_id)
-        return Server(await self._request(r))
+
+        params = {}
+
+        include = []
+        if include_players:
+            include.append('player')
+
+        include = ','.join(include)
+        if include:
+            params['include'] = include
+
+        return Server(await self._request(r, params=params))

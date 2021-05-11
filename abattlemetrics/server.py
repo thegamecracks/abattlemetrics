@@ -1,12 +1,13 @@
-import dataclasses
+from dataclasses import dataclass, field
 import datetime
-from typing import Optional
+from typing import List, Optional
 
-from .mixins import DatetimeParsable
+from .mixins import DatetimeParser, PayloadIniter
+from .player import Player
 
 
-@dataclasses.dataclass(init=False, frozen=True)
-class Server(DatetimeParsable):
+@dataclass(init=False, frozen=True)
+class Server(DatetimeParser, PayloadIniter):
     """Represents a server returned by get_server_info().
 
     Attributes:
@@ -19,6 +20,10 @@ class Server(DatetimeParsable):
     id (int): The server's ID.
     ip (str): The IPv4 address of the server.
     max_players (int): The maximum number of players the server allows.
+    name (str): The server name.
+    player_count (int): The number of players in the server.
+    players (list): A list of Player objects. This may be empty if the query
+        did not specify to include player data.
     port (int): The server's port.
     private (bool): Whether the server is private or not.
     query_port (int): The server's query port.
@@ -29,33 +34,38 @@ class Server(DatetimeParsable):
 
     """
     _init_attrs = (
-        'address', 'country', 'details', 'id', 'ip',
-        ('max_players', 'maxPlayers'), 'name', 'players', 'port',
-        ('query_port', 'portQuery'), 'private', 'rank', 'status'
+        'address', 'country', 'details', {'name': 'id', 'type': int}, 'ip',
+        {'name': 'max_players', 'path': 'maxPlayers'}, 'name',
+        {'name': 'player_count', 'path': 'players'}, 'port',
+        {'name': 'query_port', 'path': 'portQuery'}, 'private',
+        'rank', 'status'
     )
 
-    address: Optional[str]
-    country: str
-    created_at: datetime.datetime
-    details: dict
+    address: Optional[str] = field(repr=False)
+    country: str = field(repr=False)
+    created_at: datetime.datetime = field(repr=False)
+    details: dict = field(repr=False)
     id: int
-    ip: str
-    max_players: int
+    ip: str = field(repr=False)
+    max_players: int = field(repr=False)
     name: str
-    players: int
-    port: int
-    private: bool
-    query_port: int
-    rank: int
-    status: str
-    updated_at: datetime.datetime
+    player_count: int = field(repr=False)
+    players: List[Player] = field(repr=False)
+    port: int = field(repr=False)
+    private: bool = field(repr=False)
+    query_port: int = field(repr=False)
+    rank: int = field(repr=False)
+    status: str = field(repr=False)
+    updated_at: datetime.datetime = field(repr=False)
 
     def __init__(self, payload):
         attrs = payload['data']['attributes']
-        for x in self._init_attrs:
-            if isinstance(x, tuple):
-                super().__setattr__(x[0], attrs[x[1]])
-            else:
-                super().__setattr__(x, attrs[x])
+        self.__init_attrs__(attrs, self._init_attrs)
         super().__setattr__('created_at', self._parse_datetime(attrs['createdAt']))
         super().__setattr__('updated_at', self._parse_datetime(attrs['updatedAt']))
+
+        players = []
+        for item in payload['included']:
+            if item['type'] == 'player':
+                players.append(Player(item))
+        super().__setattr__('players', players)
