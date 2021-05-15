@@ -171,7 +171,6 @@ class BattleMetricsClient:
         }
 
         payload = await self._request(r, params=params)
-        print(payload)
         data = payload['data']
 
         datapoints = [DataPoint(d['attributes']) for d in data]
