@@ -1,12 +1,14 @@
 from dataclasses import dataclass, field
 import datetime
-from typing import List, Optional
+import types
+from typing import Optional
 
-from .mixins import DatetimeParser, PayloadIniter
+from .mixins import PayloadIniter
+from . import utils
 
 
-@dataclass(init=False, frozen=True)
-class Player(DatetimeParser, PayloadIniter):
+@dataclass(frozen=True, init=False)
+class Player(PayloadIniter):
     """Represents a player.
 
     Attributes:
@@ -16,14 +18,15 @@ class Player(DatetimeParser, PayloadIniter):
         Whether this is the first time the player is on the server.
     id (int): The player's id.
     name (str): The player's name.
-    score (Optional[int]): The player's ingame score.
+    score (Optional[int]): The player's in-game score.
+    payload (dict): A read-only view of the raw payload.
     playtime (Optional[float]): How long the player has been in the server
         for their current session in seconds.
     updated_at (datetime.datetime):
         When this player was last updated as a naive UTC datetime.
 
     """
-    _init_attrs = (
+    __init_attrs = (
         {'name': 'id', 'type': int},
         {'name': 'name', 'path': ('attributes', 'name')}
     )
@@ -35,6 +38,7 @@ class Player(DatetimeParser, PayloadIniter):
     id: int
     name: str                     = field(hash=False)
     score: Optional[int]          = field(hash=False, repr=False)
+    payload: dict                 = field(hash=False, repr=False)
     playtime: Optional[float]     = field(hash=False, repr=False)
     updated_at: datetime.datetime = field(hash=False, repr=False)
 
@@ -42,9 +46,11 @@ class Player(DatetimeParser, PayloadIniter):
         def flatten_meta():
             return {x['key']: x['value'] for x in payload['meta']['metadata']}
 
-        self.__init_attrs__(payload, self._init_attrs)
+        super().__setattr__('payload', types.MappingProxyType(payload))
+
+        self.__init_attrs__(payload, self.__init_attrs)
         self.__init_attrs__(flatten_meta(), self._init_meta, required=False)
 
         attrs = payload['attributes']
-        super().__setattr__('created_at', self._parse_datetime(attrs['createdAt']))
-        super().__setattr__('updated_at', self._parse_datetime(attrs['updatedAt']))
+        super().__setattr__('created_at', utils.parse_datetime(attrs['createdAt']))
+        super().__setattr__('updated_at', utils.parse_datetime(attrs['updatedAt']))

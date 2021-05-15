@@ -1,13 +1,15 @@
 from dataclasses import dataclass, field
 import datetime
+import types
 from typing import Optional, Tuple
 
-from .mixins import DatetimeParser, PayloadIniter
+from .mixins import PayloadIniter
 from .player import Player
+from . import utils
 
 
-@dataclass(init=False, frozen=True)
-class Server(DatetimeParser, PayloadIniter):
+@dataclass(frozen=True, init=False)
+class Server(PayloadIniter):
     """Represents a server returned by get_server_info().
 
     Attributes:
@@ -21,6 +23,7 @@ class Server(DatetimeParser, PayloadIniter):
     ip (str): The IPv4 address of the server.
     max_players (int): The maximum number of players the server allows.
     name (str): The server name.
+    payload (dict): A read-only view of the raw payload.
     player_count (int): The number of players in the server.
     players (tuple): A list of Player objects. This may be empty if the query
         did not specify to include player data.
@@ -33,7 +36,7 @@ class Server(DatetimeParser, PayloadIniter):
         When the server was last updated on battlemetrics as a naive UTC datetime.
 
     """
-    _init_attrs = (
+    __init_attrs = (
         'address', 'country', 'details', {'name': 'id', 'type': int}, 'ip',
         {'name': 'max_players', 'path': 'maxPlayers'}, 'name',
         {'name': 'player_count', 'path': 'players'}, 'port',
@@ -49,6 +52,7 @@ class Server(DatetimeParser, PayloadIniter):
     ip: str                       = field(hash=False, repr=False)
     max_players: int              = field(hash=False, repr=False)
     name: str                     = field(hash=False)
+    payload: dict                 = field(hash=False, repr=False)
     player_count: int             = field(hash=False, repr=False)
     players: Tuple[Player]        = field(hash=False, repr=False)
     port: int                     = field(hash=False, repr=False)
@@ -59,10 +63,12 @@ class Server(DatetimeParser, PayloadIniter):
     updated_at: datetime.datetime = field(hash=False, repr=False)
 
     def __init__(self, payload):
+        super().__setattr__('payload', types.MappingProxyType(payload))
+
         attrs = payload['data']['attributes']
-        self.__init_attrs__(attrs, self._init_attrs)
-        super().__setattr__('created_at', self._parse_datetime(attrs['createdAt']))
-        super().__setattr__('updated_at', self._parse_datetime(attrs['updatedAt']))
+        self.__init_attrs__(attrs, self.__init_attrs)
+        super().__setattr__('created_at', utils.parse_datetime(attrs['createdAt']))
+        super().__setattr__('updated_at', utils.parse_datetime(attrs['updatedAt']))
 
         players = tuple(Player(item) for item in payload['included']
                         if item['type'] == 'player')
