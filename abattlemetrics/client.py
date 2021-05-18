@@ -1,4 +1,6 @@
 import asyncio
+import datetime
+import functools
 import logging
 import json
 from typing import Optional
@@ -6,8 +8,10 @@ from urllib.parse import quote
 
 import aiohttp
 
+from .datapoint import DataPoint, Resolution
 from .errors import HTTPException
 from .server import Server
+from . import utils
 
 log = logging.getLogger(__name__)
 
@@ -51,6 +55,24 @@ class _Route:
         self.url = url
 
 
+def alias_param(name, alias):
+    """Alias a keyword parameter in a function.
+    Throws a TypeError when a value is given for both the
+    original kwarg and the alias.
+    """
+    def deco(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            alias_value = kwargs.get(alias)
+            if alias_value:
+                if name in kwargs:
+                    raise TypeError(f'Cannot pass both {name!r} and {alias!r} in call')
+                kwargs[name] = alias_value
+            return func(*args, **kwargs)
+        return wrapper
+    return deco
+
+
 class BattleMetricsClient:
     """An interface to the battlemetrics API.
 
@@ -86,24 +108,76 @@ class BattleMetricsClient:
                     log.debug(f'{route.method} {route.url} returned {r.status}')
                     data = await _json_or_text(r)
 
-                    remaining = int(r.headers['X-Rate-Limit-Remaining'])
-                    if remaining == 0:
-                        retry_after = float(r.headers['Retry-After'])
+                    retry_after = r.headers.get('Retry-After', 0)
+                    # NOTE: apparently battlemetrics doesn't always give
+                    # this header
+                    if retry_after:
                         if self.sleep_on_ratelimit:
-                            log.debug(f'Rate limited; retrying in {retry_after:.2f}')
+                            log.warning(f'Rate limited; retrying in {retry_after:.2f}')
                             await asyncio.sleep(retry_after)
                             log.debug('Done sleeping for rate limit, retrying...')
                             continue
                         else:
+                            e = HTTPException(r)
                             # unlock once rate limit is done
-                            log.debug('Rate limited; raising exception')
+                            log.warning(
+                                'Rate limited; sleep_on_ratelimit '
+                                'is True, raising exception', exc_info=e
+                            )
                             lock.defer(retry_after)
-                            raise HTTPException(r)
+                            raise e
 
                     if r.status != 200:
-                        raise HTTPException(r)
+                        e = HTTPException(r)
+                        log.debug('Response %d caused with:\nHeaders: %s\nParams: %s',
+                                  r.status, headers, params, exc_info=e)
+                        raise e
 
                     return data
+
+            # No more retries left
+            raise HTTPException(r)
+
+    @alias_param('stop', 'before')
+    @alias_param('start', 'after')
+    async def get_player_count_history(
+            self, server_id: int, *,
+            start: datetime.datetime = None, stop: datetime.datetime = None,
+            resolution: Optional[Resolution] = Resolution.RAW):
+        """Obtain a server's player count history.
+
+        Args:
+            server_id (int): The server's id.
+            start (datetime.datetime): Get the player count history after
+                this time. If naive, assumes time is in UTC.
+                This parameter has "after" as an alias.
+            stop (datetime.datetime): Get the player count history before
+                this time. If naive, assumes time is in UTC.
+                This parameter has "before" as an alias.
+            resolution (Optional[Resolution]):
+                The resolution of the data points. If raw, the data points
+                will only have value provided. Any other option will provide
+                value, min, and max.
+
+        Returns:
+            List[DataPoint]: A list of data points sorted by timestamp.
+
+        """
+        r = _Route('GET', '/servers/{server_id}/player-count-history', server_id=server_id)
+
+        params = {
+            'start': utils.isoify_datetime(start),
+            'stop': utils.isoify_datetime(stop),
+            'resolution': resolution.value
+        }
+
+        payload = await self._request(r, params=params)
+        data = payload['data']
+
+        datapoints = [DataPoint(d['attributes']) for d in data]
+        datapoints.sort(key=lambda dp: dp.timestamp)
+
+        return datapoints
 
     async def get_server_info(self, server_id: int, *, include_players=False):
         """Obtain server info given an ID.

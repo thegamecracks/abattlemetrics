@@ -1,5 +1,7 @@
 import asyncio
+import datetime
 import logging
+from pprint import pprint
 
 import abattlemetrics as abm
 import aiohttp
@@ -14,8 +16,11 @@ log.addHandler(handler)
 async def main():
     async with aiohttp.ClientSession() as session:
         client = abm.BattleMetricsClient(session)
-        server = await client.get_server_info(1234, include_players=True)
-        print(server)
+        # Get the player count history in the last hour
+        start = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
+        stop = datetime.datetime.now().astimezone()
+        datapoints = await client.get_player_count_history(1234, start=start, stop=stop)
+        pprint(datapoints)
 
 
 if __name__ == '__main__':
