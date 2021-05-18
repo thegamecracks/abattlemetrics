@@ -108,9 +108,10 @@ class BattleMetricsClient:
                     log.debug(f'{route.method} {route.url} returned {r.status}')
                     data = await _json_or_text(r)
 
-                    remaining = int(r.headers['X-Rate-Limit-Remaining'])
-                    if remaining == 0:
-                        retry_after = float(r.headers['Retry-After'])
+                    retry_after = r.headers.get('Retry-After', 0)
+                    # NOTE: apparently battlemetrics doesn't always give
+                    # this header
+                    if retry_after:
                         if self.sleep_on_ratelimit:
                             log.warning(f'Rate limited; retrying in {retry_after:.2f}')
                             await asyncio.sleep(retry_after)
