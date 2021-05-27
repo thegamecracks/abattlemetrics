@@ -1,13 +1,13 @@
 import asyncio
 import datetime
 import logging
-from pprint import pprint
 
 import abattlemetrics as abm
 import aiohttp
 
+TOKEN = '<Your token here>'
 PLAYER_ID = 1234
-SERVER_ID = 1234
+PLAYER_ID_TYPE = abm.IdentifierType.STEAM_ID
 
 log = logging.getLogger('abattlemetrics')
 log.setLevel(logging.DEBUG)
@@ -18,13 +18,13 @@ log.addHandler(handler)
 
 async def main():
     async with aiohttp.ClientSession() as session:
-        client = abm.BattleMetricsClient(session)
-        # Get the time played history in the last week
-        stop = datetime.datetime.utcnow()
-        start = stop - datetime.timedelta(weeks=1)
-        datapoints = await client.get_player_time_played_history(
-            PLAYER_ID, SERVER_ID, start=start, stop=stop)
-        pprint(datapoints)
+        client = abm.BattleMetricsClient(session, TOKEN)
+        player_id = await client.match_player(PLAYER_ID, PLAYER_ID_TYPE)
+        if player_id:
+            player = await client.get_player_info(player_id)
+            print(player)
+        else:
+            print('Player not found')
 
 
 if __name__ == '__main__':
