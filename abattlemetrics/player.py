@@ -1,10 +1,35 @@
 from dataclasses import dataclass, field
 import datetime
+import enum
 import types
 from typing import Optional
 
 from .mixins import PayloadIniter
 from . import utils
+
+
+class IdentifierType(enum.Enum):
+    """A player identifier type.
+
+    Types:
+        BE[_LEGACY]_GUID: BattlEye GUID
+
+    """
+    BE_GUID                  = 'BEGUID'
+    BE_LEGACY_GUID           = 'legacyBEGUID'
+    CONAN_CHAR_NAME          = 'conanCharName'
+    EGS_ID                   = 'egsID'
+    FUNCOM_ID                = 'funcomID'
+    IP                       = 'ip'
+    MC_UUID                  = 'mcUUID'
+    NAME                     = 'name'
+    PLAY_FAB_ID              = 'playFabID'
+    STEAM_FAMILY_SHARE_OWNER = 'steamFamilyShareOwner'
+    STEAM_ID                 = 'steamID'
+    SURVIVOR_NAME            = 'survivorName'
+
+    def __repr__(self):
+        return '<{0.__class__.__name__}.{0.name}>'.format(self)
 
 
 @dataclass(frozen=True, init=False)
@@ -43,13 +68,14 @@ class Player(PayloadIniter):
     updated_at: datetime.datetime = field(hash=False, repr=False)
 
     def __init__(self, payload):
-        def flatten_meta():
-            return {x['key']: x['value'] for x in payload['meta']['metadata']}
+        def flatten_meta(metadata):
+            return {x['key']: x['value'] for x in metadata}
 
         super().__setattr__('payload', types.MappingProxyType(payload))
 
         self.__init_attrs__(payload, self.__init_attrs)
-        self.__init_attrs__(flatten_meta(), self._init_meta, required=False)
+        metadata = flatten_meta(payload.get('meta', {}).get('metadata', {}))
+        self.__init_attrs__(metadata, self._init_meta, required=False)
 
         attrs = payload['attributes']
         super().__setattr__('created_at', utils.parse_datetime(attrs['createdAt']))

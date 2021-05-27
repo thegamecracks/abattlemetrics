@@ -4,6 +4,8 @@ import logging
 import abattlemetrics as abm
 import aiohttp
 
+SERVER_ID = 1234
+
 log = logging.getLogger('abattlemetrics')
 log.setLevel(logging.DEBUG)
 handler = logging.FileHandler('abattlemetrics.log', encoding='utf-8', mode='w')
@@ -14,7 +16,7 @@ log.addHandler(handler)
 async def main():
     async with aiohttp.ClientSession() as session:
         client = abm.BattleMetricsClient(session)
-        server = await client.get_server_info(1234, include_players=True)
+        server = await client.get_server_info(SERVER_ID, include_players=True)
         print(server)
 
 
