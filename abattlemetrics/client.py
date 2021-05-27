@@ -3,7 +3,7 @@ import datetime
 import functools
 import logging
 import json
-from typing import Optional
+from typing import List, Optional, Union
 from urllib.parse import quote
 
 import aiohttp
@@ -109,8 +109,8 @@ class BattleMetricsClient:
                     data = await _json_or_text(r)
 
                     retry_after = r.headers.get('Retry-After', 0)
-                    # NOTE: apparently battlemetrics doesn't always give
-                    # this header
+                    # NOTE: battlemetrics doesn't always give
+                    # X-Rate-Limit-Remaining header
                     if retry_after:
                         if self.sleep_on_ratelimit:
                             log.warning(f'Rate limited; retrying in {retry_after:.2f}')
@@ -129,8 +129,10 @@ class BattleMetricsClient:
 
                     if r.status != 200:
                         e = HTTPException(r)
-                        log.debug('Response %d caused with:\nHeaders: %s\nParams: %s',
-                                  r.status, headers, params, exc_info=e)
+                        log.exception(
+                            'Response %d caused with:\nHeaders: %s\nParams: %s',
+                            r.status, headers, params, exc_info=e
+                        )
                         raise e
 
                     return data
@@ -143,16 +145,19 @@ class BattleMetricsClient:
     async def get_player_count_history(
             self, server_id: int, *,
             start: datetime.datetime = None, stop: datetime.datetime = None,
-            resolution: Optional[Resolution] = Resolution.RAW):
+            resolution: Optional[Resolution] = Resolution.RAW
+        ) -> List[DataPoint]:
         """Obtain a server's player count history.
 
         Args:
-            server_id (int): The server's id.
-            start (datetime.datetime): Get the player count history after
-                this time. If naive, assumes time is in UTC.
+            server_id (int): The server's ID.
+            start (datetime.datetime):
+                Get the player count history after this time.
+                If naive, assumes time is in UTC.
                 This parameter has "after" as an alias.
-            stop (datetime.datetime): Get the player count history before
-                this time. If naive, assumes time is in UTC.
+            stop (datetime.datetime):
+                Get the player count history before this time.
+                If naive, assumes time is in UTC.
                 This parameter has "before" as an alias.
             resolution (Optional[Resolution]):
                 The resolution of the data points. If raw, the data points
@@ -179,11 +184,57 @@ class BattleMetricsClient:
 
         return datapoints
 
-    async def get_server_info(self, server_id: int, *, include_players=False):
+    @alias_param('stop', 'before')
+    @alias_param('start', 'after')
+    async def get_player_time_played_history(
+            self, player_id: int, server_id: int, *,
+            start: datetime.datetime = None,
+            stop: datetime.datetime = None
+        ) -> List[DataPoint]:
+        """Obtain a player's time played history for a server.
+        The values of each datapoint are in seconds.
+
+        Start and stop are truncated to the date.
+
+        Args:
+            player_id (int): The player's ID.
+            server_id (int): The server ID.
+            start (datetime.datetime):
+                Get the time played history after this time.
+                If naive, assumes time is in UTC.
+                This parameter has "after" as an alias.
+            stop (datetime.datetime):
+                Get the time played history before this time.
+                If naive, assumes time is in UTC.
+                This parameter has "before" as an alias.
+
+        Returns:
+            List[DataPoint]: A list of data points sorted by timestamp.
+
+        """
+        r = _Route('GET', '/players/{player_id}/time-played-history/{server_id}',
+                   player_id=player_id, server_id=server_id)
+
+        params = {
+            'start': utils.isoify_datetime(start),
+            'stop': utils.isoify_datetime(stop)
+        }
+
+        payload = await self._request(r, params=params)
+        data = payload['data']
+
+        datapoints = [DataPoint(d['attributes']) for d in data]
+        datapoints.sort(key=lambda dp: dp.timestamp)
+
+        return datapoints
+
+    async def get_server_info(
+            self, server_id: int, *, include_players=False
+        ) -> Server:
         """Obtain server info given an ID.
 
         Args:
-            server_id (int): The server's id.
+            server_id (int): The server's ID.
             include_players (bool): Whether to also fetch player data.
                 This affects the `players` attribute.
 
