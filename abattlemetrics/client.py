@@ -245,7 +245,6 @@ class BattleMetricsClient:
             stop: datetime.datetime = None
         ) -> List[DataPoint]:
         """Obtain a player's time played history for a server.
-        The values of each datapoint are in seconds.
 
         Start and stop are truncated to the date.
 
@@ -263,6 +262,7 @@ class BattleMetricsClient:
 
         Returns:
             List[DataPoint]: A list of data points sorted by timestamp.
+                Each data point is per day and their values are in seconds.
 
         """
         r = _Route('GET', '/players/{player_id}/time-played-history/{server_id}',
