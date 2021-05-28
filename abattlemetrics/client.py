@@ -182,8 +182,8 @@ class BattleMetricsClient:
                     if r.status != 200:
                         e = HTTPException(r)
                         log.exception(
-                            'Response %d caused with:\nHeaders: %s\nParams: %s',
-                            r.status, headers, params, exc_info=e
+                            'Response %d caused with:\nRoute: %s %s\nParams: %s',
+                            r.status, route.method, route.path, params, exc_info=e
                         )
                         raise e
 
