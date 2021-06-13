@@ -101,10 +101,10 @@ class AsyncSessionIterator(AsyncIterator):
 
             if self._organization_ids:
                 params['filter[organizations]'] = ','.join([
-                    str(n) for n in self._organization_ids])
+                    str(int(n)) for n in self._organization_ids])
             if self._server_ids:
                 params['filter[servers]'] = ','.join([
-                    str(n) for n in self._server_ids])
+                    str(int(n)) for n in self._server_ids])
 
             include = []
             if self._include_servers:

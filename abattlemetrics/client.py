@@ -5,7 +5,7 @@ import inspect
 import json
 import logging
 import sys
-from typing import List, Optional, Union
+from typing import Iterable, List, Optional, Union
 from urllib.parse import quote
 
 import aiohttp
@@ -242,8 +242,8 @@ class BattleMetricsClient:
 
     def get_player_session_history(
             self, player_id: int, *, limit: int,
-            organization_ids: Optional[List[int]] = None,
-            server_ids: Optional[List[int]] = None,
+            organization_ids: Optional[Iterable[int]] = None,
+            server_ids: Optional[Iterable[int]] = None,
             include_servers: bool = True,
         ) -> AsyncSessionIterator:
         """Return an async iterator yielding a player's sessions
@@ -251,9 +251,9 @@ class BattleMetricsClient:
 
         Args:
             limit (int): The maximum number of sessions to yield.
-            organization_ids (Optional[List[int]]): A list of
+            organization_ids (Optional[Iterable[int]]): A list of
                 organization IDs to filter sessions by.
-            server_ids (Optional[List[int]]): A list of
+            server_ids (Optional[Iterable[int]]): A list of
                 server IDs to filter sessions by.
             include_servers (bool): Request server data as well,
                 filling in the `server` attribute of each Session object.
@@ -264,14 +264,6 @@ class BattleMetricsClient:
         """
         if limit < 1:
             raise ValueError(f'limit must be at least 1 ({limit})')
-
-        if organization_ids:
-            for i, v in enumerate(organization_ids):
-                organization_ids[i] = int(v)
-
-        if server_ids:
-            for i, v in enumerate(server_ids):
-                server_ids[i] = int(v)
 
         return AsyncSessionIterator(
             self, int(player_id), int(limit), organization_ids, server_ids,
