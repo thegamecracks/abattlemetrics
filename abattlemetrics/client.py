@@ -12,6 +12,7 @@ import aiohttp
 
 from .datapoint import DataPoint, Resolution
 from .errors import HTTPException
+from .iterators import AsyncSessionIterator
 from .limiter import Limiter
 from .player import IdentifierType, Player
 from .server import Server
@@ -111,6 +112,8 @@ class BattleMetricsClient:
             sleeping or raising an error.
 
     """
+    _Route = _Route
+
     def __init__(
             self, session: aiohttp.ClientSession, token: Optional[str] = None,
             *, sleep_on_ratelimit: bool = True):
@@ -236,6 +239,44 @@ class BattleMetricsClient:
         datapoints.sort(key=lambda dp: dp.timestamp)
 
         return datapoints
+
+    def get_player_session_history(
+            self, player_id: int, *, limit: int,
+            organization_ids: Optional[List[int]] = None,
+            server_ids: Optional[List[int]] = None,
+            include_servers: bool = True,
+        ) -> AsyncSessionIterator:
+        """Return an async iterator yielding a player's sessions
+        ordered by most recent.
+
+        Args:
+            limit (int): The maximum number of sessions to yield.
+            organization_ids (Optional[List[int]]): A list of
+                organization IDs to filter sessions by.
+            server_ids (Optional[List[int]]): A list of
+                server IDs to filter sessions by.
+            include_servers (bool): Request server data as well,
+                filling in the `server` attribute of each Session object.
+
+        Returns:
+            AsyncSessionIterator
+
+        """
+        if limit < 1:
+            raise ValueError(f'limit must be at least 1 ({limit})')
+
+        if organization_ids:
+            for i, v in enumerate(organization_ids):
+                organization_ids[i] = int(v)
+
+        if server_ids:
+            for i, v in enumerate(server_ids):
+                server_ids[i] = int(v)
+
+        return AsyncSessionIterator(
+            self, int(player_id), int(limit), organization_ids, server_ids,
+            include_servers
+        )
 
     @_alias_param('stop', 'before')
     @_alias_param('start', 'after')
