@@ -146,20 +146,24 @@ class BattleMetricsClient:
             params = {}
 
         bucket = self._buckets.get(bucket)
-        if bucket is not None:
-            retry_after = bucket.update_rate_limit()
-            if retry_after:
-                log.debug(
-                    '{0.method} {0.url} locally rate limited for {1:.2f}s'.format(
-                        route, retry_after)
-                )
-                await asyncio.sleep(retry_after)
 
         async with _MaybeUnlock(self._reqlock) as lock:
             for tries in range(5):
+                if bucket is not None:
+                    retry_after = bucket.get_retry_after()
+                    if retry_after:
+                        log.debug(
+                            '{0.method} {0.url} locally rate limited for {1:.2f}s'.format(
+                                route, retry_after)
+                        )
+                        await asyncio.sleep(retry_after)
+
                 async with self.session.request(
                         route.method, route.url,
                         headers=headers, params=params, **kwargs) as r:
+                    if bucket is not None:
+                        bucket.update_rate_limit()
+
                     log.debug(f'{route.method} {route.url} returned {r.status}')
                     data = await _json_or_text(r)
 

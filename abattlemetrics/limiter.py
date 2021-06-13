@@ -17,36 +17,41 @@ class Limiter:
         self.rate = int(rate)
         self.per = float(per)
         self.leak_rate = self.per / self.rate
-        self._last = time.monotonic()
+        self._last = 0.0
         self._tokens = rate
 
     def get_tokens(self, current=None):
         current = time.monotonic() if current is None else current
+        last = self._last or current
 
         tokens = self._tokens
 
-        if current > self._last + self.per:
+        if current > last + self.per:
             # Passed window
             tokens = self.rate
         else:
             # Add back any tokens leaked
-            elapsed = current - self._last
+            elapsed = current - last
             tokens += int(elapsed // self.leak_rate)
 
         return tokens
 
-    def get_retry_after(self, current=None, *, _tokens=None):
+    def get_retry_after(self, current=None, *, tokens=None):
         current = time.monotonic() if current is None else current
+        last = self._last or current
 
-        tokens = self.get_tokens(current) if _tokens is None else _tokens
+        if tokens is None:
+            tokens = self.get_tokens(current)
         if tokens:
             return 0
 
-        elapsed = current - self._last
+        elapsed = current - last
         return max(0, self.leak_rate - elapsed)
 
     def update_rate_limit(self, current=None):
         current = time.monotonic() if current is None else current
+        if not self._last:
+            self._last = current
 
         tokens = self.get_tokens(current)
 
@@ -54,7 +59,7 @@ class Limiter:
         if tokens:
             self._tokens = tokens - 1
         else:
-            retry_after = self.get_retry_after(current, _tokens=tokens)
+            retry_after = self.get_retry_after(current, tokens=tokens)
 
         # Only update _last when a token is leaked
         if current - self._last > self.leak_rate:
@@ -63,7 +68,7 @@ class Limiter:
         return retry_after
 
     def reset(self):
-        self._last = time.monotonic()
+        self._last = 0.0
         self._tokens = self.rate
 
 
