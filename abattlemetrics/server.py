@@ -65,11 +65,21 @@ class Server(PayloadIniter):
     def __init__(self, payload):
         super().__setattr__('payload', types.MappingProxyType(payload))
 
-        attrs = payload['data']['attributes']
+        data = payload.get('data')
+        if data:
+            attrs = data['attributes']
+        else:
+            attrs = payload['attributes']
+
         self.__init_attrs__(attrs, self.__init_attrs)
         super().__setattr__('created_at', utils.parse_datetime(attrs['createdAt']))
         super().__setattr__('updated_at', utils.parse_datetime(attrs['updatedAt']))
 
-        players = tuple(Player(item) for item in payload['included']
-                        if item['type'] == 'player')
+        included = payload.get('included')
+        players = ()
+        if included:
+            players = tuple(
+                Player(item) for item in included
+                if item['type'] == 'player'
+            )
         super().__setattr__('players', players)
