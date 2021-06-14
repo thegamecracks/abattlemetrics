@@ -1,11 +1,12 @@
 import asyncio
+import builtins
 import datetime
 import functools
 import inspect
 import json
 import logging
 import sys
-from typing import Iterable, List, Optional, Union
+from typing import Dict, Iterable, List, Optional, Union
 from urllib.parse import quote
 
 import aiohttp
@@ -181,7 +182,7 @@ class BattleMetricsClient:
                             # unlock once rate limit is done
                             log.warning(
                                 'Rate limited; sleep_on_ratelimit '
-                                'is True, raising exception', exc_info=e
+                                'is False, raising exception', exc_info=e
                             )
                             lock.defer(retry_after)
                             raise e
@@ -319,10 +320,10 @@ class BattleMetricsClient:
         return datapoints
 
     @_add_bucket(1, 1)
-    async def match_player(
-            self, identifier: Union[int, str], type: IdentifierType
-        ) -> Optional[int]:
-        """Get the first player that matches a given identifier.
+    async def match_players(
+            self, *identifiers: Union[int, str], type: IdentifierType
+        ) -> Dict[Union[int, str], Optional[int]]:
+        """Get the player IDs associated with the given identifiers.
 
         Requires authentication token with these permissions:
             RCON:
@@ -331,14 +332,26 @@ class BattleMetricsClient:
         This endpoint is rate limited to: 1/1s
 
         Args:
-            identifier (Union[int, str]): An identifier for the player.
+            identifiers (Union[int, str]): The player identifiers.
+                You are allowed to request up to 100 identifiers at a time.
             type (IdentifierType): The type of identifier being provided.
 
         Returns:
-            int: The player's battlemetrics ID.
-            None: The player could not be found.
+            Dict[Union[int, str], Optional[int]]:
+                Mapping of player identifier to battlemetrics ID.
+                The identifier will be the same type as passed
+                in the parameters.
+                Unmatched identifiers are mapped to None.
 
         """
+        def transfer_type(x):
+            return identifier_types[x](x)
+
+        if not identifiers:
+            raise TypeError('At least 1 identifier must be given')
+        elif len(identifiers) > 100:
+            raise ValueError('Only 100 identifiers can be requested at once')
+
         r = _Route('POST', '/players/match')
         data = {
             'data': [
@@ -346,16 +359,24 @@ class BattleMetricsClient:
                     'type': 'identifier',
                     'attributes': {
                         'type': type.value,
-                        'identifier': str(identifier)
+                        'identifier': str(i)
                     }
                 }
+                for i in identifiers
             ]
         }
         payload = await self._request(r, json=data, bucket=_get_my_name())
         data = payload['data']
         if not data:
-            return
-        return data[0]['relationships']['player']['data']['id']
+            return {}
+
+        identifier_types = {str(i): builtins.type(i) for i in identifiers}
+
+        results = dict.fromkeys(identifiers)
+        for d in data:
+            i = transfer_type(d['attributes']['identifier'])
+            results[i] = int(d['relationships']['player']['data']['id'])
+        return results
 
     async def get_player_info(self, player_id: int) -> Player:
         """Get a player's info from their battlemetrics ID.

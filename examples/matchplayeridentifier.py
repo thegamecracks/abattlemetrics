@@ -18,9 +18,10 @@ log.addHandler(handler)
 async def main():
     async with aiohttp.ClientSession() as session:
         client = abm.BattleMetricsClient(session, TOKEN)
-        player_id = await client.match_player(PLAYER_ID, PLAYER_ID_TYPE)
-        if player_id:
-            player = await client.get_player_info(player_id)
+        results = await client.match_players(PLAYER_ID, type=PLAYER_ID_TYPE)
+        bm_id = results[PLAYER_ID]
+        if bm_id is not None:
+            player = await client.get_player_info(bm_id)
             print(player)
         else:
             print('Player not found')
