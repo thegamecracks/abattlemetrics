@@ -1,3 +1,4 @@
+import collections
 import logging
 from typing import List, Literal, Optional, Union
 import urllib.parse as urlparse
@@ -103,7 +104,14 @@ class AsyncPlayerListIterator(AsyncPaginatedIterator):
         await super()._request_page(params)
 
     async def _parse_response(self, r) -> List[Player]:
-        return [Player(payload) for payload in r['data']]
+        identifiers = collections.defaultdict(list)
+        for payload in r['included']:
+            if payload['type'] == 'identifier':
+                p_id = int(payload['relationships']['player']['data']['id'])
+                identifiers[p_id].append(payload)
+
+        return [Player(payload, identifiers.get(p_id, None))
+                for payload in r['data']]
 
 
 class AsyncSessionIterator(AsyncPaginatedIterator):

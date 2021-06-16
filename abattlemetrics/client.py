@@ -343,6 +343,7 @@ class BattleMetricsClient:
             first_seen_after: Optional[datetime.datetime] = None,
             first_seen_before: Optional[datetime.datetime] = None,
             game: Optional[str] = None,
+            include_identifiers: bool = False,
             is_online: Optional[bool] = None,
             last_seen_after: Optional[datetime.datetime] = None,
             last_seen_before: Optional[datetime.datetime] = None,
@@ -377,6 +378,8 @@ class BattleMetricsClient:
                 Requires token with "View RCON information" permission.
             game (Optional[str]):
                 Filter by this game name.
+            include_identifiers (bool): If True, fetches and fills in
+                `identifiers` atttribute for each Player.
             is_online (Optional[bool]):
                 If True, only return players that are currently online.
             last_seen_after (Optional[datetime.datetime]):
@@ -432,6 +435,12 @@ class BattleMetricsClient:
             )
         if game:
             params['filter[server][game]'] = str(game)
+
+        include = []
+        if include_identifiers:
+            include.append('identifier')
+        if include:
+            params['include'] = ','.join(include)
         if is_online:
             params['filter[online]'] = 'true'
         if last_seen_after:

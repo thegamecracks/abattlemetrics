@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 import datetime
 import enum
 import types
-from typing import Optional
+from typing import Optional, Tuple
 
 from .mixins import PayloadIniter
 from . import utils
@@ -25,6 +25,47 @@ class IdentifierType(enum.Enum):
 
     def __repr__(self):
         return '<{0.__class__.__name__}.{0.name}>'.format(self)
+
+
+@dataclass(frozen=True, init=False)
+class Identifier(PayloadIniter):
+    """A player identifier.
+
+    Attributes:
+    id (int): The identifier ID.
+        Note that this is not the actual player identifier.
+    last_seen (datetime.datetime):
+        The time this identifier was last seen as a naive UTC datetime.
+    name (str): The player identifier.
+    payload (dict): A read-only view of the raw payload.
+    player_id (int): The player ID this identifier is associated to.
+    private (bool): Indicates if this should be considered private.
+    type (IdentifierType): The type of identifier this is.
+
+    """
+    __init_attrs = (
+        {'name': 'id', 'type': int},
+        {'name': 'last_seen', 'type': utils.parse_datetime,
+         'path': ('attributes', 'lastSeen')},
+        {'name': 'name', 'path': ('attributes', 'identifier')},
+        {'name': 'player_id', 'type': int,
+         'path': ('relationships', 'player', 'data', 'id')},
+        {'name': 'private', 'path': ('attributes', 'private')},
+        {'name': 'type', 'path': ('attributes', 'type'), 'type': IdentifierType}
+    )
+
+    id: int
+    last_seen: datetime.datetime  = field(hash=False, repr=False)
+    name: str                     = field(hash=False)
+    payload: dict                 = field(hash=False, repr=False)
+    player_id: int                = field(hash=False, repr=False)
+    private: bool                 = field(hash=False, repr=False)
+    type: IdentifierType          = field(hash=False, repr=False)
+
+    def __init__(self, payload):
+        super().__setattr__('payload', types.MappingProxyType(payload))
+
+        self.__init_attrs__(payload, self.__init_attrs)
 
 
 @dataclass(frozen=True, init=False)
@@ -53,26 +94,31 @@ class Player(PayloadIniter):
 
     """
     __init_attrs = (
+        {'name': 'created_at', 'type': utils.parse_datetime,
+         'path': ('attributes', 'createdAt')},
         {'name': 'id', 'type': int},
         {'name': 'name', 'path': ('attributes', 'name')},
         {'name': 'private', 'path': ('attributes', 'private')},
-        {'name': 'positive_match', 'path': ('attributes', 'positiveMatch')}
+        {'name': 'positive_match', 'path': ('attributes', 'positiveMatch')},
+        {'name': 'updated_at', 'type': utils.parse_datetime,
+         'path': ('attributes', 'updatedAt')}
     )
     _init_meta = ({'name': 'first_time', 'path': 'firstTime'},
                   'score', {'name': 'playtime', 'path': 'time'})
 
-    created_at: datetime.datetime = field(hash=False, repr=False)
-    first_time: Optional[bool]    = field(hash=False, repr=False)
+    created_at: datetime.datetime       = field(hash=False, repr=False)
+    first_time: Optional[bool]          = field(hash=False, repr=False)
     id: int
-    name: str                     = field(hash=False)
-    score: Optional[int]          = field(hash=False, repr=False)
-    payload: dict                 = field(hash=False, repr=False)
-    playtime: Optional[float]     = field(hash=False, repr=False)
-    positive_match: bool          = field(hash=False, repr=False)
-    private: bool                 = field(hash=False, repr=False)
-    updated_at: datetime.datetime = field(hash=False, repr=False)
+    identifiers: Tuple[Identifier, ...] = field(hash=False, repr=False)
+    name: str                           = field(hash=False)
+    score: Optional[int]                = field(hash=False, repr=False)
+    payload: dict                       = field(hash=False, repr=False)
+    playtime: Optional[float]           = field(hash=False, repr=False)
+    positive_match: bool                = field(hash=False, repr=False)
+    private: bool                       = field(hash=False, repr=False)
+    updated_at: datetime.datetime       = field(hash=False, repr=False)
 
-    def __init__(self, payload):
+    def __init__(self, payload, identifiers=None):
         def flatten_meta(metadata):
             return {x['key']: x['value'] for x in metadata}
 
@@ -82,6 +128,8 @@ class Player(PayloadIniter):
         metadata = flatten_meta(payload.get('meta', {}).get('metadata', {}))
         self.__init_attrs__(metadata, self._init_meta, required=False)
 
-        attrs = payload['attributes']
-        super().__setattr__('created_at', utils.parse_datetime(attrs['createdAt']))
-        super().__setattr__('updated_at', utils.parse_datetime(attrs['updatedAt']))
+        if identifiers:
+            identifiers = tuple(Identifier(p) for p in identifiers)
+        else:
+            identifiers = ()
+        super().__setattr__('identifiers', identifiers)
