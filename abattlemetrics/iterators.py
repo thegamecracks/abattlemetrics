@@ -110,8 +110,13 @@ class AsyncPlayerListIterator(AsyncPaginatedIterator):
                 p_id = int(payload['relationships']['player']['data']['id'])
                 identifiers[p_id].append(payload)
 
-        return [Player(payload, identifiers.get(p_id, None))
-                for payload in r['data']]
+        return [
+            Player(
+                payload,
+                identifiers.get(int(payload['id']), None)
+            )
+            for payload in r['data']
+        ]
 
 
 class AsyncSessionIterator(AsyncPaginatedIterator):
