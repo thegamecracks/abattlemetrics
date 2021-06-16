@@ -6,6 +6,8 @@ from typing import Optional
 from .mixins import PayloadIniter
 from . import utils
 
+__all__ = ('DataPoint', 'Resolution')
+
 
 class Resolution(enum.Enum):
     """The resolution to use when querying DataPoints."""

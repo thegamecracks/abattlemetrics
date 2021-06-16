@@ -1,7 +1,9 @@
-__version__ = '0.4.1'
+__version__ = '0.4.2'
 
-from .client import BattleMetricsClient
-from .datapoint import DataPoint, Resolution
+from .client import *
+from .datapoint import *
 from .errors import *
-from .player import IdentifierType, Player
-from .server import Server
+from .iterators import *
+from .player import *
+from .server import *
+from .session import *

@@ -9,6 +9,8 @@ from .mixins import PayloadIniter
 from .server import Server
 from . import utils
 
+__all__ = ('Session',)
+
 
 @dataclass(frozen=True, init=False)
 class Session(PayloadIniter):

@@ -7,6 +7,8 @@ from .mixins import PayloadIniter
 from .player import Player
 from . import utils
 
+__all__ = ('Server',)
+
 
 @dataclass(frozen=True, init=False)
 class Server(PayloadIniter):

@@ -19,6 +19,8 @@ from .player import IdentifierType, Player
 from .server import Server
 from . import __version__, utils
 
+__all__ = ('BattleMetricsClient',)
+
 log = logging.getLogger(__name__)
 
 
@@ -403,6 +405,7 @@ class BattleMetricsClient:
             search (Optional[str]): The search term to match each player to.
                 Explanation on this is provided here:
                 https://www.battlemetrics.com/players
+                Note that public results only allow you to match names.
             server_ids (Optional[Iterable[int]]):
                 Filter by a list of server IDs.
 

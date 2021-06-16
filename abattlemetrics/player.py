@@ -7,6 +7,8 @@ from typing import Optional, Tuple
 from .mixins import PayloadIniter
 from . import utils
 
+__all__ = ('IdentifierType', 'Identifier', 'Player')
+
 
 class IdentifierType(enum.Enum):
     """A player identifier type."""
@@ -86,6 +88,9 @@ class Player(PayloadIniter):
     first_time (Optional[bool]):
         Whether this is the first time the player is on the server.
     id (int): The player's id.
+    identifiers (Tuple[Identifier, ...]):
+        A tuple of Identifiers for this Player. Currently, this attribute
+        is only provided by the `BattleMetricsClient.list_players()` endpoint.
     name (str): The player's name.
     score (Optional[int]): The player's in-game score.
     payload (dict): A read-only view of the raw payload.

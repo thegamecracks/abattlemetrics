@@ -2,6 +2,8 @@ import asyncio
 import math
 import time
 
+__all__ = ('Limiter',)
+
 
 class Limiter:
     """An implementation of the leaky bucket algorithm.

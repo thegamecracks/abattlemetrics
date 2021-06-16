@@ -7,6 +7,8 @@ from .player import Player
 from .session import Session
 from .server import Server
 
+__all__ = ('AsyncIterator', 'AsyncPlayerListIterator', 'AsyncSessionIterator')
+
 log = logging.getLogger(__name__)
 
 
