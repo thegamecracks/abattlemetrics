@@ -1,6 +1,6 @@
 import datetime
 
-DATETIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
+import dateutil.parser
 
 
 def isoify_datetime(dt: datetime.datetime) -> str:
@@ -13,4 +13,7 @@ def isoify_datetime(dt: datetime.datetime) -> str:
 
 def parse_datetime(date_string: str) -> datetime.datetime:
     """Parse a datetime given by battlemetrics."""
-    return datetime.datetime.strptime(date_string, DATETIME_FORMAT)
+    dt = dateutil.parser.isoparse(date_string)
+    if dt.tzinfo:
+        return dt.astimezone(datetime.timezone.utc).replace(tzinfo=None)
+    return dt
