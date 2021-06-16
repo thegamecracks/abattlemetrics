@@ -13,7 +13,7 @@ import aiohttp
 
 from .datapoint import DataPoint, Resolution
 from .errors import HTTPException
-from .iterators import AsyncSessionIterator
+from .iterators import AsyncPlayerListIterator, AsyncSessionIterator
 from .limiter import Limiter
 from .player import IdentifierType, Player
 from .server import Server
@@ -178,7 +178,7 @@ class BattleMetricsClient:
                             log.debug('Done sleeping for rate limit, retrying...')
                             continue
                         else:
-                            e = HTTPException(r)
+                            e = HTTPException(r, data)
                             # unlock once rate limit is done
                             log.warning(
                                 'Rate limited; sleep_on_ratelimit '
@@ -188,7 +188,7 @@ class BattleMetricsClient:
                             raise e
 
                     if r.status != 200:
-                        e = HTTPException(r)
+                        e = HTTPException(r, data)
                         log.exception(
                             'Response %d caused with:\nRoute: %s %s\nParams: %s',
                             r.status, route.method, route.path, params, exc_info=e
@@ -198,7 +198,7 @@ class BattleMetricsClient:
                     return data
 
             # No more retries left
-            raise HTTPException(r)
+            raise HTTPException(r, data)
 
     @_alias_param('stop', 'before')
     @_alias_param('start', 'after')
@@ -267,13 +267,30 @@ class BattleMetricsClient:
             AsyncSessionIterator
 
         """
-        if limit < 1:
-            raise ValueError(f'limit must be at least 1 ({limit})')
+        limit = int(limit)
+        player_id = int(player_id)
 
-        return AsyncSessionIterator(
-            self, int(player_id), int(limit), organization_ids, server_ids,
-            include_servers
-        )
+        if limit < 1:
+            raise ValueError('limit must be at least 1')
+
+        params = {}
+        if organization_ids:
+            params['filter[organizations]'] = ','.join([
+                str(int(n)) for n in organization_ids
+            ])
+        if server_ids:
+            params['filter[servers]'] = ','.join([
+                str(int(n)) for n in server_ids
+            ])
+
+        include = []
+        if include_servers:
+            include.append('server')
+        include = ','.join(include)
+        if include:
+            params['include'] = include
+
+        return AsyncSessionIterator(self, limit, player_id, params)
 
     @_alias_param('stop', 'before')
     @_alias_param('start', 'after')
@@ -319,17 +336,138 @@ class BattleMetricsClient:
 
         return datapoints
 
+    def list_players(
+            self, *, limit: int = 10,
+            countries: Optional[Iterable[str]] = None,
+            distance: Optional[int] = None,
+            first_seen_after: Optional[datetime.datetime] = None,
+            first_seen_before: Optional[datetime.datetime] = None,
+            game: Optional[str] = None,
+            is_online: Optional[bool] = None,
+            last_seen_after: Optional[datetime.datetime] = None,
+            last_seen_before: Optional[datetime.datetime] = None,
+            online_at: Optional[datetime.datetime] = None,
+            organization_id: Optional[int] = None,
+            public: bool = True,
+            search: Optional[str] = None,
+            server_ids: Optional[Iterable[int]] = None
+        ) -> AsyncPlayerListIterator:
+        """Search records for players ordered by most recent.
+
+        Player objects returned will not have metadata such as `first_time`.
+
+        Certain parameters are documented with
+        their authentication requirements.
+
+        Args:
+            limit (int): The maximum number of players to yield.
+            countries (Optional[Iterable[str]]):
+                Filter by a list of ISO 3166-1 alpha-2 country codes.
+            distance (Optional[int]):
+                Filter by maximum server distance to the client in kilometres.
+            first_seen_after (Optional[datetime.datetime]):
+                Filter by players first seen after this datetime.
+                If naive, assumes time is in UTC.
+                `server_ids` must also be provided for this parameter.
+                Requires token with "View RCON information" permission.
+            first_seen_before (Optional[datetime.datetime]):
+                Filter by players first seen before this datetime.
+                If naive, assumes time is in UTC.
+                `server_ids` must also be provided for this parameter.
+                Requires token with "View RCON information" permission.
+            game (Optional[str]):
+                Filter by this game name.
+            is_online (Optional[bool]):
+                If True, only return players that are currently online.
+            last_seen_after (Optional[datetime.datetime]):
+                Filter by players last seen after this datetime.
+                If naive, assumes time is in UTC.
+            last_seen_before (Optional[datetime.datetime]):
+                Filter by players last seen before this datetime.
+                If naive, assumes time is in UTC.
+            online_at (Optional[datetime.datetime]):
+                Filter by players being online at this datetime.
+                If naive, assumes time is in UTC.
+                `public` must also be False.
+            organization_id (Optional[int]):
+                Filter by an organization ID.
+                Requires authentication.
+            public (bool): If True, includes public records.
+                Otherwise, only players in your servers are returned.
+                Requires authentication for non-public results.
+            search (Optional[str]): The search term to match each player to.
+                Explanation on this is provided here:
+                https://www.battlemetrics.com/players
+            server_ids (Optional[Iterable[int]]):
+                Filter by a list of server IDs.
+
+        Returns:
+            AsyncPlayerListIterator
+
+        """
+        limit = int(limit)
+        if limit < 1:
+            raise ValueError('limit must be at least 1')
+
+        params = {'sort': '-lastSeen'}
+        if countries:
+            params['filter[server][countries][]'] = [str(c) for c in countries]
+        if distance:
+            distance = int(distance)
+            if distance < 0:
+                raise ValueError('distance cannot be negative')
+            params['filter[server][maxDistance]'] = distance
+        if first_seen_after or first_seen_before:
+            p = 'after' if first_seen_after else 'before'
+            if not self.token:
+                raise ValueError(f'authentication required for first_seen_{p}')
+            elif not server_ids:
+                # Will result in 500
+                raise ValueError(f'server_ids required for first_seen_{p}')
+            params['filter[firstSeen]'] = '{}:{}'.format(
+                utils.isoify_datetime(first_seen_after)
+                    if first_seen_after else '',
+                utils.isoify_datetime(first_seen_before)
+                    if first_seen_before else ''
+            )
+        if game:
+            params['filter[server][game]'] = str(game)
+        if is_online:
+            params['filter[online]'] = 'true'
+        if last_seen_after:
+            params['filter[after]'] = utils.isoify_datetime(last_seen_after)
+        if last_seen_before:
+            params['filter[before]'] = utils.isoify_datetime(last_seen_before)
+        if online_at:
+            if public:
+                raise ValueError('public=False required for online_at')
+            params['filter[sessions][at]'] = utils.isoify_datetime(online_at)
+        if organization_id:
+            if not self.token:
+                raise ValueError('authentication required for organization_id')
+            params['filter[organization]'] = int(organization_id)
+        if not public:
+            if not self.token:
+                raise ValueError('authentication required for public=False')
+            params['filter[public]'] = 'false'  # API defaults to true
+        if search:
+            params['filter[search]'] = str(search)
+        if server_ids:
+            params['filter[servers]'] = ','.join([
+                str(int(n)) for n in server_ids
+            ])
+
+        return AsyncPlayerListIterator(self, limit, params)
+
     @_add_bucket(1, 1)
     async def match_players(
             self, *identifiers: Union[int, str], type: IdentifierType
         ) -> Dict[Union[int, str], Optional[int]]:
         """Get the player IDs associated with the given identifiers.
 
-        Requires authentication token with these permissions:
-            RCON:
-                View RCON information
+        Requires authentication token with "View RCON information" permission.                
 
-        This endpoint is rate limited to: 1/1s
+        This endpoint is rate limited to 1/1s.
 
         Args:
             identifiers (Union[int, str]): The player identifiers.

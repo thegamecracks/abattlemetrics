@@ -9,12 +9,7 @@ from . import utils
 
 
 class IdentifierType(enum.Enum):
-    """A player identifier type.
-
-    Types:
-        BE[_LEGACY]_GUID: BattlEye GUID
-
-    """
+    """A player identifier type."""
     BE_GUID                  = 'BEGUID'
     BE_LEGACY_GUID           = 'legacyBEGUID'
     CONAN_CHAR_NAME          = 'conanCharName'
@@ -47,13 +42,21 @@ class Player(PayloadIniter):
     payload (dict): A read-only view of the raw payload.
     playtime (Optional[float]): How long the player has been in the server
         for their current session in seconds.
+    positive_match (bool):
+        When retrieved from a search with unique identifiers,
+        this will be True if one of those identifiers exactly
+        matches this player.
+    private (bool): Indicates if the profile is private.
+        Private profiles are excluded from search and player lists.
     updated_at (datetime.datetime):
         When this player was last updated as a naive UTC datetime.
 
     """
     __init_attrs = (
         {'name': 'id', 'type': int},
-        {'name': 'name', 'path': ('attributes', 'name')}
+        {'name': 'name', 'path': ('attributes', 'name')},
+        {'name': 'private', 'path': ('attributes', 'private')},
+        {'name': 'positive_match', 'path': ('attributes', 'positiveMatch')}
     )
     _init_meta = ({'name': 'first_time', 'path': 'firstTime'},
                   'score', {'name': 'playtime', 'path': 'time'})
@@ -65,6 +68,8 @@ class Player(PayloadIniter):
     score: Optional[int]          = field(hash=False, repr=False)
     payload: dict                 = field(hash=False, repr=False)
     playtime: Optional[float]     = field(hash=False, repr=False)
+    positive_match: bool          = field(hash=False, repr=False)
+    private: bool                 = field(hash=False, repr=False)
     updated_at: datetime.datetime = field(hash=False, repr=False)
 
     def __init__(self, payload):
