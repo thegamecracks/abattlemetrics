@@ -12,6 +12,17 @@ class HTTPException(BattleMetricsException):
         status (int): The HTTP status code.
 
     """
-    def __init__(self, response: aiohttp.ClientResponse):
+    def __init__(self, response: aiohttp.ClientResponse, data, *args):
         self.status = response.status
-        super().__init__('{0.status} {0.reason}'.format(response))
+        errors = data.get('errors')
+        detail = None
+        if errors:
+            detail = errors[0]['detail']
+        self.detail = detail
+        super().__init__(
+            '{0.status} {0.reason}{1}'.format(
+                response,
+                f' ({detail})' if detail else ''
+            ),
+            *args
+        )

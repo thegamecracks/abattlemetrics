@@ -1,11 +1,30 @@
 import logging
-from typing import Optional, Union
+from typing import List, Literal, Optional, Union
 import urllib.parse as urlparse
 
+from .player import Player
 from .session import Session
 from .server import Server
 
 log = logging.getLogger(__name__)
+
+
+def _convert_params_to_array(params: dict) -> Union[dict, list]:
+    """Convert a dictionary to a list of key-value pairs, unpacking
+    list values to their own keys. If none of the values are a list,
+    returns the dictionary untouched.
+    """
+    if not any(isinstance(v, list) for v in params.values()):
+        return params
+
+    new = []
+    for k, v in params.items():
+        if isinstance(v, list):
+            for v_v in v:
+                new.append((k, v_v))
+        else:
+            new.append((k, v))
+    return new
 
 
 class AsyncIterator:
@@ -23,29 +42,83 @@ class AsyncIterator:
 
     async def __anext__(self):
         return await self.next()
-    
-class AsyncSessionIterator(AsyncIterator):
-    def __init__(
-            self, client, player_id, limit, organization_ids, server_ids,
-            include_servers):
-        self._client = client
-        self._limit = limit
-        self._organization_ids = organization_ids
-        self._server_ids = server_ids
-        self._include_servers = include_servers
 
-        self._route = client._Route(
+
+class AsyncPaginatedIterator(AsyncIterator):
+    _MAX_SIZE = 100
+
+    def __init__(self, client, route, limit, params):
+        self._client = client
+        self._route = route
+        self._limit = limit
+        self._params = params
+        self._current_page = None
+
+    def _get_next_params(self, r: dict) -> Optional[dict]:
+        params = r['links'].get('next')
+        if params:
+            return urlparse.parse_qs(urlparse.urlparse(params).query)
+        return
+
+    async def _request_page(self, params: Union[dict, list]):
+        params = _convert_params_to_array(params)
+        res = await self._client._request(self._route, params=params)
+        page = await self._parse_response(res)
+
+        params = None
+        if page:
+            params = self._get_next_params(res)
+
+        self._limit -= len(page)
+        if params and self._limit <= 0:
+            params = None
+
+        page.reverse()
+        self._current_page = page
+        self._params = params
+
+    async def _parse_response(self, r: dict) -> List[object]:
+        raise NotImplementedError
+
+    async def next(self):
+        if self._current_page:
+            return self._current_page.pop()
+        elif self._params is not None:
+            self._params['page[size]'] = min(self._limit, self._MAX_SIZE)
+            await self._request_page(self._params)
+
+        if self._current_page:
+            return self._current_page.pop()
+        else:
+            raise StopAsyncIteration
+
+
+class AsyncPlayerListIterator(AsyncPaginatedIterator):
+    def __init__(self, client, limit, params):
+        route = client._Route('GET', '/players')
+        super().__init__(client, route, limit, params)
+
+    async def _request_page(self, params):
+        log.debug('Requesting %d players listed', params['page[size]'])
+        await super()._request_page(params)
+
+    async def _parse_response(self, r) -> List[Player]:
+        return [Player(payload) for payload in r['data']]
+
+
+class AsyncSessionIterator(AsyncPaginatedIterator):
+    def __init__(self, client, limit, player_id, params):
+        route = client._Route(
             'GET', '/players/{player_id}/relationships/sessions',
             player_id=player_id
         )
-        self._current_page = []
-        self._params: Optional[Union[dict, False]] = None
+        super().__init__(client, route, limit, params)
 
-    async def _parse_response(self, r):
-        params = r['links'].get('next', False)
-        if params:
-            params = urlparse.parse_qs(urlparse.urlparse(params).query)
+    async def _request_page(self, params):
+        log.debug('Requesting %d sessions', params['page[size]'])
+        await super()._request_page(params)
 
+    async def _parse_response(self, r) -> List[Session]:
         servers = {
             payload['attributes']['id']: Server(payload)
             for payload in r['included']
@@ -62,60 +135,4 @@ class AsyncSessionIterator(AsyncIterator):
 
             page.append(session)
 
-        # NOTE: is this needed? i.e. does battlemetrics guarantee that
-        # next won't be provided if no data is given?
-        if not page:
-            params = False
-
-        return page, params
-
-    async def next(self):
-        async def request_page(params):
-            log.debug('Requesting %d sessions', params['page[size]'])
-            res = await self._client._request(self._route, params=params)
-            page, params = await self._parse_response(res)
-
-            self._limit -= len(page)
-            if params:
-                if self._limit > 0:
-                    # Update page size so we don't query excess sessions
-                    params['page[size]'] = min(self._limit, 100)
-                else:
-                    # Stop making more requests after this page
-                    params = False
-
-            page.reverse()
-            self._current_page = page
-            self._params = params
-
-        if self._current_page:
-            return self._current_page.pop()
-        elif self._params:
-            # Next page
-            await request_page(self._params)
-        elif self._params is not False:
-            # Initial request
-            params = {
-                'page[size]': min(self._limit, 100)
-            }
-
-            if self._organization_ids:
-                params['filter[organizations]'] = ','.join([
-                    str(int(n)) for n in self._organization_ids])
-            if self._server_ids:
-                params['filter[servers]'] = ','.join([
-                    str(int(n)) for n in self._server_ids])
-
-            include = []
-            if self._include_servers:
-                include.append('server')
-            include = ','.join(include)
-            if include:
-                params['include'] = include
-
-            await request_page(params)
-
-        if self._current_page:
-            return self._current_page.pop()
-        else:
-            raise StopAsyncIteration
+        return page
