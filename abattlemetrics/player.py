@@ -36,7 +36,10 @@ class Identifier(PayloadIniter):
         Note that this is not the actual player identifier.
     last_seen (datetime.datetime):
         The time this identifier was last seen as a naive UTC datetime.
-    name (str): The player identifier.
+    metadata (dict): A read-only view of the payload metadata.
+        This is supplied for certain identifiers, e.g. IP.
+    name (Optional[str]): The player identifier.
+        This may be None depending on the type, e.g. IP.
     payload (dict): A read-only view of the raw payload.
     player_id (int): The player ID this identifier is associated to.
     private (bool): Indicates if this should be considered private.
@@ -47,7 +50,8 @@ class Identifier(PayloadIniter):
         {'name': 'id', 'type': int},
         {'name': 'last_seen', 'type': utils.parse_datetime,
          'path': ('attributes', 'lastSeen')},
-        {'name': 'name', 'path': ('attributes', 'identifier')},
+        {'name': 'name', 'path': ('attributes', 'identifier'),
+         'default': None},
         {'name': 'player_id', 'type': int,
          'path': ('relationships', 'player', 'data', 'id')},
         {'name': 'private', 'path': ('attributes', 'private')},
@@ -56,6 +60,7 @@ class Identifier(PayloadIniter):
 
     id: int
     last_seen: datetime.datetime  = field(hash=False, repr=False)
+    metadata: dict                = field(hash=False, repr=False)
     name: str                     = field(hash=False)
     payload: dict                 = field(hash=False, repr=False)
     player_id: int                = field(hash=False, repr=False)
@@ -66,6 +71,9 @@ class Identifier(PayloadIniter):
         super().__setattr__('payload', types.MappingProxyType(payload))
 
         self.__init_attrs__(payload, self.__init_attrs)
+
+        metadata = payload['attributes']['metadata'] or {}
+        super().__setattr__('metadata', types.MappingProxyType(metadata))
 
 
 @dataclass(frozen=True, init=False)

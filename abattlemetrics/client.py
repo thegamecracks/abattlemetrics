@@ -379,7 +379,9 @@ class BattleMetricsClient:
             game (Optional[str]):
                 Filter by this game name.
             include_identifiers (bool): If True, fetches and fills in
-                `identifiers` atttribute for each Player.
+                the `identifiers` atttribute for each Player.
+                For public results, this will only contain identifers
+                of type `IdentifierType.NAME`.
             is_online (Optional[bool]):
                 If True, only return players that are currently online.
             last_seen_after (Optional[datetime.datetime]):
