@@ -30,13 +30,22 @@ class PayloadIniter:
              'type': int}
                 Reads the "serverSteamId" key inside "details", converts it
                 to an integer, and assigns it to `steam_id`
+            {'name': 'score', 'default': 0}
+                Reads the "score" key and if it exists, assigns it
+                to `score`, otherwise the `default` value is used.
+                Does not convert to `type`.
+            {'name': 'identifier', 'default_factory': dict}
+                Reads the "identifier" key and if it exists, assigns it
+                to `identifier`, otherwise `default_factory` is called
+                for a value. Does not convert to `type`.
 
         Args:
             attrs (dict): A dictionary of attributes to extract values from.
                 This is usually a payload.
-            mapping:
+            mapping (Tuple[Dict[str, object]]):
                 The mapping to follow when extracting attributes from attrs.
-            required (bool): If True, all specified attributes must exist.
+            required (bool): If True, all specified attributes that do not
+                have a default or default_factory must exist.
                 Otherwise, some keys can be missing from attrs, in
                 which case their corresponding attribute is set to None.
 
@@ -45,14 +54,16 @@ class PayloadIniter:
         """
         def lookup(p):
             v = attrs
-            for x in p:
+            for k in p:
                 try:
-                    v = v[x]
-                except (KeyError, TypeError) as e:
+                    v = v[k]
+                except (KeyError, TypeError):
                     if required:
-                        raise KeyError(f'attrs is missing {x!r} from {v!r}') from e
+                        raise KeyError(f'attrs is missing {k!r} from {v!r}')
                     return
             return v
+
+        missing = object()
 
         for x in mapping:
             if isinstance(x, str):
@@ -63,7 +74,16 @@ class PayloadIniter:
                     path = name
                 if isinstance(path, str):
                     path = (path,)
-                val = lookup(path)
+
+                try:
+                    val = lookup(path)
+                except KeyError as e:
+                    val = x.get('default', missing)
+                    if val is missing:
+                        val = x.get('default_factory', missing)
+                        if default is missing:
+                            raise e
+                        val = default()
 
                 conv = x.get('type')
                 if conv is not None:

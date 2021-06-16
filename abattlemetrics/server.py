@@ -37,11 +37,15 @@ class Server(PayloadIniter):
 
     """
     __init_attrs = (
+        {'name': 'created_at', 'type': utils.parse_datetime,
+         'path': 'createdAt'},
         'address', 'country', 'details', {'name': 'id', 'type': int}, 'ip',
         {'name': 'max_players', 'path': 'maxPlayers'}, 'name',
         {'name': 'player_count', 'path': 'players'}, 'port',
         {'name': 'query_port', 'path': 'portQuery'}, 'private',
-        'rank', 'status'
+        'rank', 'status',
+        {'name': 'updated_at', 'type': utils.parse_datetime,
+         'path': 'updatedAt'}
     )
 
     address: Optional[str]        = field(hash=False, repr=False)
@@ -72,8 +76,6 @@ class Server(PayloadIniter):
             attrs = payload['attributes']
 
         self.__init_attrs__(attrs, self.__init_attrs)
-        super().__setattr__('created_at', utils.parse_datetime(attrs['createdAt']))
-        super().__setattr__('updated_at', utils.parse_datetime(attrs['updatedAt']))
 
         included = payload.get('included')
         players = ()
