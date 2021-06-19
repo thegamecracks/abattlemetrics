@@ -14,11 +14,16 @@ class HTTPException(BattleMetricsException):
     """
     def __init__(self, response: aiohttp.ClientResponse, data, *args):
         self.status = response.status
-        errors = data.get('errors')
+
         detail = None
-        if errors:
-            detail = errors[0]['detail']
+        if isinstance(data, dict):
+            errors = data.get('errors')
+            if errors:
+                detail = errors[0]['detail']
+        else:
+            detail = data
         self.detail = detail
+
         super().__init__(
             '{0.status} {0.reason}{1}'.format(
                 response,
