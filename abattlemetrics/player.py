@@ -37,7 +37,7 @@ class Identifier(PayloadIniter):
     id (int): The identifier ID.
         Note that this is not the actual player identifier.
     last_seen (datetime.datetime):
-        The time this identifier was last seen as a naive UTC datetime.
+        The time this identifier was last seen as an aware datetime.
     metadata (dict): A read-only view of the payload metadata.
         This is supplied for certain identifiers, e.g. IP.
     name (Optional[str]): The player identifier.
@@ -84,7 +84,7 @@ class Player(PayloadIniter):
 
     Attributes:
     created_at (datetime.datetime): When the player was first created
-        on battlemetrics as a naive UTC datetime.
+        on battlemetrics as an aware datetime.
     first_time (Optional[bool]):
         Whether this is the first time the player is on the server.
     id (int): The player's id.
@@ -103,7 +103,7 @@ class Player(PayloadIniter):
     private (bool): Indicates if the profile is private.
         Private profiles are excluded from search and player lists.
     updated_at (datetime.datetime):
-        When this player was last updated as a naive UTC datetime.
+        When this player was last updated as an aware datetime.
 
     """
     __init_attrs = (

@@ -18,7 +18,7 @@ class Server(PayloadIniter):
     address (Optional[str]): The server address, e.g. play.example.com
     country (str): The country code that the server is hosted in.
     created_at (datetime.datetime):
-        When the server was created on battlemetrics as a naive UTC datetime.
+        When the server was created on battlemetrics as an aware datetime.
     details (dict): A dict with more specific details on the server's settings,
         such as difficulty, map, or game version.
     id (int): The server's ID.
@@ -35,7 +35,7 @@ class Server(PayloadIniter):
     rank (int): The server's rank on battlemetrics's leaderboards.
     status (str): The status of the server, i.e. "online" or "offline"
     updated_at (datetime.datetime):
-        When the server was last updated on battlemetrics as a naive UTC datetime.
+        When the server was last updated on battlemetrics as an aware datetime.
 
     """
     __init_attrs = (
