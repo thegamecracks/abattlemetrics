@@ -29,8 +29,8 @@ class DataPoint(PayloadIniter):
         This is usually provided when resolution is not raw.
     name (Optional[str]): The name of the metric.
         Only provided when more than one metric is requested.
-    timestamp (datetime.datetime): The data point's timestamp
-        as a naive UTC datetime.
+    timestamp (datetime.datetime):
+        The data point's timestamp as an aware datetime.
     value (int): The value of the data point.
 
     """

@@ -12,6 +12,12 @@ from . import utils
 __all__ = ('Session',)
 
 
+def _parse_optional_datetime(date_string: Optional[str]):
+    if not date_string:
+        return None
+    return utils.parse_datetime(date_string)
+
+
 @dataclass(frozen=True, init=False)
 class Session(PayloadIniter):
     """Represents a player session.
@@ -29,10 +35,10 @@ class Session(PayloadIniter):
         This may be None if the server data was not included.
     server_id (int): The ID of the server this session took place in.
     start (Optional[datetime.datetime]):
-        The start of the session as a naive UTC datetime.
+        The start of the session as an aware datetime.
         Battlemetrics may occasionally not provide this date.
     stop (Optional[datetime.datetime]):
-        The end of the session as a naive UTC datetime.
+        The end of the session as an aware datetime.
         Battlemetrics may occasionally not provide this date.
 
     """
@@ -44,6 +50,11 @@ class Session(PayloadIniter):
         {'name': 'player_name', 'path': ('attributes', 'name')},
         {'name': 'server_id', 'type': int,
          'path': ('relationships', 'server', 'data', 'id')},
+        {'name': 'start', 'type': _parse_optional_datetime,
+         'path': ('attributes', 'start')},
+        {'name': 'stop', 'type': _parse_optional_datetime,
+         'path': ('attributes', 'stop')}
+         
     )
 
     first_time: bool                   = field(hash=False, repr=False)
@@ -61,13 +72,6 @@ class Session(PayloadIniter):
         # NOTE: server is manually assigned by AsyncSessionIterator
 
         self.__init_attrs__(payload, self.__init_attrs)
-
-        attrs = payload['attributes']
-        start, stop = attrs['start'], attrs['stop']
-        start = utils.parse_datetime(start) if start else None
-        stop = utils.parse_datetime(stop) if stop else None
-        super().__setattr__('start', start)
-        super().__setattr__('stop', stop)
 
     @functools.cached_property
     def playtime(self) -> float:

@@ -215,11 +215,11 @@ class BattleMetricsClient:
             server_id (int): The server's ID.
             start (datetime.datetime):
                 Get the player count history after this time.
-                If naive, assumes time is in UTC.
+                Naive datetimes are assumed to be in local time.
                 This parameter has "after" as an alias.
             stop (datetime.datetime):
                 Get the player count history before this time.
-                If naive, assumes time is in UTC.
+                Naive datetimes are assumed to be in local time.
                 This parameter has "before" as an alias.
             resolution (Optional[Resolution]):
                 The resolution of the data points. If raw, the data points
@@ -310,11 +310,11 @@ class BattleMetricsClient:
             server_id (int): The server ID.
             start (datetime.datetime):
                 Get the time played history after this time.
-                If naive, assumes time is in UTC.
+                Naive datetimes are assumed to be in local time.
                 This parameter has "after" as an alias.
             stop (datetime.datetime):
                 Get the time played history before this time.
-                If naive, assumes time is in UTC.
+                Naive datetimes are assumed to be in local time.
                 This parameter has "before" as an alias.
 
         Returns:
@@ -370,12 +370,12 @@ class BattleMetricsClient:
                 Filter by maximum server distance to the client in kilometres.
             first_seen_after (Optional[datetime.datetime]):
                 Filter by players first seen after this datetime.
-                If naive, assumes time is in UTC.
+                Naive datetimes are assumed to be in local time.
                 `server_ids` must also be provided for this parameter.
                 Requires token with "View RCON information" permission.
             first_seen_before (Optional[datetime.datetime]):
                 Filter by players first seen before this datetime.
-                If naive, assumes time is in UTC.
+                Naive datetimes are assumed to be in local time.
                 `server_ids` must also be provided for this parameter.
                 Requires token with "View RCON information" permission.
             game (Optional[str]):
@@ -388,13 +388,13 @@ class BattleMetricsClient:
                 If True, only return players that are currently online.
             last_seen_after (Optional[datetime.datetime]):
                 Filter by players last seen after this datetime.
-                If naive, assumes time is in UTC.
+                Naive datetimes are assumed to be in local time.
             last_seen_before (Optional[datetime.datetime]):
                 Filter by players last seen before this datetime.
-                If naive, assumes time is in UTC.
+                Naive datetimes are assumed to be in local time.
             online_at (Optional[datetime.datetime]):
                 Filter by players being online at this datetime.
-                If naive, assumes time is in UTC.
+                Naive datetimes are assumed to be in local time.
                 `public` must also be False.
             organization_id (Optional[int]):
                 Filter by an organization ID.
