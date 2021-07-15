@@ -19,8 +19,8 @@ async def main():
     async with aiohttp.ClientSession() as session:
         client = abm.BattleMetricsClient(session)
         # Get the player count history in the last hour
-        start = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
-        stop = datetime.datetime.now().astimezone()
+        stop = datetime.datetime.now()
+        start = stop - datetime.timedelta(hours=1)
         datapoints = await client.get_player_count_history(SERVER_ID, start=start, stop=stop)
         pprint(datapoints)
 

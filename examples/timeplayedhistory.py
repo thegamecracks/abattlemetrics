@@ -20,7 +20,7 @@ async def main():
     async with aiohttp.ClientSession() as session:
         client = abm.BattleMetricsClient(session)
         # Get the time played history in the last week
-        stop = datetime.datetime.utcnow()
+        stop = datetime.datetime.now()
         start = stop - datetime.timedelta(weeks=1)
         datapoints = await client.get_player_time_played_history(
             PLAYER_ID, SERVER_ID, start=start, stop=stop)
