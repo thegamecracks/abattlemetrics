@@ -68,16 +68,19 @@ def _alias_param(name, alias):
     Throws a TypeError when a value is given for both the
     original kwarg and the alias.
     """
+    MISSING = object()
+
     def deco(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            alias_value = kwargs.get(alias)
-            if alias_value:
+            alias_value = kwargs.pop(alias, MISSING)
+            if alias_value is not MISSING:
                 if name in kwargs:
                     raise TypeError(f'Cannot pass both {name!r} and {alias!r} in call')
                 kwargs[name] = alias_value
             return func(*args, **kwargs)
         return wrapper
+
     return deco
 
 
@@ -206,7 +209,7 @@ class BattleMetricsClient:
     @_alias_param('start', 'after')
     async def get_player_count_history(
             self, server_id: int, *,
-            start: datetime.datetime = None, stop: datetime.datetime = None,
+            start: datetime.datetime, stop: datetime.datetime,
             resolution: Optional[Resolution] = Resolution.RAW
         ) -> List[DataPoint]:
         """Obtain a server's player count history.
@@ -298,8 +301,7 @@ class BattleMetricsClient:
     @_alias_param('start', 'after')
     async def get_player_time_played_history(
             self, player_id: int, server_id: int, *,
-            start: datetime.datetime = None,
-            stop: datetime.datetime = None
+            start: datetime.datetime, stop: datetime.datetime
         ) -> List[DataPoint]:
         """Obtain a player's time played history for a server.
 
