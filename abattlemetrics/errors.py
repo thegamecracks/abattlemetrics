@@ -25,9 +25,6 @@ class HTTPException(BattleMetricsException):
         self.detail = detail
 
         super().__init__(
-            '{0.status} {0.reason}{1}'.format(
-                response,
-                f' ({detail})' if detail else ''
-            ),
+            '{0.status} {0.reason}'.format(response),
             *args
         )
