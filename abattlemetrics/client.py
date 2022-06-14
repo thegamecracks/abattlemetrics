@@ -174,6 +174,7 @@ class BattleMetricsClient:
                     data = await _json_or_text(r)
 
                     retry_after = r.headers.get('Retry-After', 0)
+                    retry_after = float(retry_after)
                     # NOTE: battlemetrics doesn't always give
                     # X-Rate-Limit-Remaining header
                     if retry_after:
