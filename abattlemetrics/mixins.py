@@ -1,4 +1,3 @@
-import datetime
 from typing import Tuple, Union
 
 
@@ -81,9 +80,9 @@ class PayloadIniter:
                     val = x.get('default', missing)
                     if val is missing:
                         val = x.get('default_factory', missing)
-                        if default is missing:
+                        if val is missing:
                             raise e
-                        val = default()
+                        val = val()
 
                 conv = x.get('type')
                 if conv is not None:
