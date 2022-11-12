@@ -1,6 +1,6 @@
 import collections
 import logging
-from typing import List, Literal, Optional, Union
+from typing import List, Optional, Union
 import urllib.parse as urlparse
 
 from .player import Player
@@ -61,7 +61,6 @@ class AsyncPaginatedIterator(AsyncIterator):
         params = r['links'].get('next')
         if params:
             return urlparse.parse_qs(urlparse.urlparse(params).query)
-        return
 
     async def _request_page(self, params: Union[dict, list]):
         params = _convert_params_to_array(params)

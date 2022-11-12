@@ -121,8 +121,12 @@ class BattleMetricsClient:
     _Route = _Route
 
     def __init__(
-            self, session: aiohttp.ClientSession, token: Optional[str] = None,
-            *, sleep_on_ratelimit: bool = True):
+        self,
+        session: aiohttp.ClientSession,
+        token: Optional[str] = None,
+        *,
+        sleep_on_ratelimit: bool = True
+    ):
         self.session = session
         self.token = token
         self.sleep_on_ratelimit = sleep_on_ratelimit
@@ -209,10 +213,12 @@ class BattleMetricsClient:
     @_alias_param('stop', 'before')
     @_alias_param('start', 'after')
     async def get_player_count_history(
-            self, server_id: int, *,
-            start: datetime.datetime, stop: datetime.datetime,
-            resolution: Optional[Resolution] = Resolution.RAW
-        ) -> List[DataPoint]:
+        self,
+        server_id: int,
+        *,
+        start: datetime.datetime, stop: datetime.datetime,
+        resolution: Optional[Resolution] = Resolution.RAW
+    ) -> List[DataPoint]:
         """Obtain a server's player count history.
 
         Args:
@@ -252,11 +258,14 @@ class BattleMetricsClient:
         return datapoints
 
     def get_player_session_history(
-            self, player_id: int, *, limit: int,
-            organization_ids: Optional[Iterable[int]] = None,
-            server_ids: Optional[Iterable[int]] = None,
-            include_servers: bool = True,
-        ) -> AsyncSessionIterator:
+        self,
+        player_id: int,
+        *,
+        limit: int,
+        organization_ids: Optional[Iterable[int]] = None,
+        server_ids: Optional[Iterable[int]] = None,
+        include_servers: bool = True,
+    ) -> AsyncSessionIterator:
         """Return an async iterator yielding a player's sessions
         ordered by most recent.
 
@@ -301,9 +310,13 @@ class BattleMetricsClient:
     @_alias_param('stop', 'before')
     @_alias_param('start', 'after')
     async def get_player_time_played_history(
-            self, player_id: int, server_id: int, *,
-            start: datetime.datetime, stop: datetime.datetime
-        ) -> List[DataPoint]:
+        self,
+        player_id: int,
+        server_id: int,
+        *,
+        start: datetime.datetime,
+        stop: datetime.datetime
+    ) -> List[DataPoint]:
         """Obtain a player's time played history for a server.
 
         Start and stop are truncated to the date.
@@ -342,22 +355,24 @@ class BattleMetricsClient:
         return datapoints
 
     def list_players(
-            self, *, limit: int = 10,
-            countries: Optional[Iterable[str]] = None,
-            distance: Optional[int] = None,
-            first_seen_after: Optional[datetime.datetime] = None,
-            first_seen_before: Optional[datetime.datetime] = None,
-            game: Optional[str] = None,
-            include_identifiers: bool = False,
-            is_online: Optional[bool] = None,
-            last_seen_after: Optional[datetime.datetime] = None,
-            last_seen_before: Optional[datetime.datetime] = None,
-            online_at: Optional[datetime.datetime] = None,
-            organization_id: Optional[int] = None,
-            public: bool = True,
-            search: Optional[str] = None,
-            server_ids: Optional[Iterable[int]] = None
-        ) -> AsyncPlayerListIterator:
+        self,
+        *,
+        limit: int = 10,
+        countries: Optional[Iterable[str]] = None,
+        distance: Optional[int] = None,
+        first_seen_after: Optional[datetime.datetime] = None,
+        first_seen_before: Optional[datetime.datetime] = None,
+        game: Optional[str] = None,
+        include_identifiers: bool = False,
+        is_online: Optional[bool] = None,
+        last_seen_after: Optional[datetime.datetime] = None,
+        last_seen_before: Optional[datetime.datetime] = None,
+        online_at: Optional[datetime.datetime] = None,
+        organization_id: Optional[int] = None,
+        public: bool = True,
+        search: Optional[str] = None,
+        server_ids: Optional[Iterable[int]] = None
+    ) -> AsyncPlayerListIterator:
         """Search records for players ordered by most recent.
 
         Player objects returned will not have metadata such as `first_time`.
@@ -435,11 +450,10 @@ class BattleMetricsClient:
             elif not server_ids:
                 # Will result in 500
                 raise ValueError(f'server_ids required for first_seen_{p}')
+
             params['filter[firstSeen]'] = '{}:{}'.format(
-                utils.isoify_datetime(first_seen_after)
-                    if first_seen_after else '',
-                utils.isoify_datetime(first_seen_before)
-                    if first_seen_before else ''
+                utils.isoify_datetime(first_seen_after) if first_seen_after else '',
+                utils.isoify_datetime(first_seen_before) if first_seen_before else ''
             )
         if game:
             params['filter[server][game]'] = str(game)
@@ -478,11 +492,13 @@ class BattleMetricsClient:
 
     @_add_bucket(1, 1)
     async def match_players(
-            self, *identifiers: Union[int, str], type: IdentifierType
-        ) -> Dict[Union[int, str], Optional[int]]:
+        self,
+        *identifiers: Union[int, str],
+        type: IdentifierType
+    ) -> Dict[Union[int, str], Optional[int]]:
         """Get the player IDs associated with the given identifiers.
 
-        Requires authentication token with "View RCON information" permission.                
+        Requires authentication token with "View RCON information" permission.
 
         This endpoint is rate limited to 1/1s.
 
@@ -548,8 +564,11 @@ class BattleMetricsClient:
         return Player(payload['data'])
 
     async def get_server_info(
-            self, server_id: int, *, include_players=False
-        ) -> Server:
+        self,
+        server_id: int,
+        *,
+        include_players=False
+    ) -> Server:
         """Obtain server info given an ID.
 
         Args:

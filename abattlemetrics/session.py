@@ -2,7 +2,6 @@ from dataclasses import dataclass, field
 import datetime
 import functools
 import types
-import pprint
 from typing import Optional
 
 from .mixins import PayloadIniter
@@ -54,7 +53,7 @@ class Session(PayloadIniter):
          'path': ('attributes', 'start')},
         {'name': 'stop', 'type': _parse_optional_datetime,
          'path': ('attributes', 'stop')}
-         
+
     )
 
     first_time: bool                   = field(hash=False, repr=False)
