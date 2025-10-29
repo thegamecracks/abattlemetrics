@@ -21,7 +21,7 @@ from .session import Session as Session
 def _get_version() -> str:
     from importlib.metadata import version
 
-    return version("ministatus")
+    return version("abattlemetrics")
 
 
 __version__ = _get_version()
