@@ -2,6 +2,7 @@ run_venv.bat
 desktop.ini
 *.db-shm
 *.db-wal
+.vscode/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
