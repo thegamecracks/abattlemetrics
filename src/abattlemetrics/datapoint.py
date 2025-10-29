@@ -1,6 +1,6 @@
 import datetime
 import enum
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 from .mixins import PayloadIniter
