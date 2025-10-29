@@ -7,7 +7,7 @@ from .mixins import PayloadIniter
 from .player import Player
 from . import utils
 
-__all__ = ('Server',)
+__all__ = ("Server",)
 
 
 @dataclass(frozen=True, init=False)
@@ -38,18 +38,26 @@ class Server(PayloadIniter):
         When the server was last updated on battlemetrics as an aware datetime.
 
     """
+
     __init_attrs = (
-        {'name': 'created_at', 'type': utils.parse_datetime,
-         'path': 'createdAt'},
-        'address', 'country', 'details', {'name': 'id', 'type': int}, 'ip',
-        {'name': 'max_players', 'path': 'maxPlayers'}, 'name',
-        {'name': 'player_count', 'path': 'players'}, 'port',
-        {'name': 'query_port', 'path': 'portQuery'}, 'private',
-        'rank', 'status',
-        {'name': 'updated_at', 'type': utils.parse_datetime,
-         'path': 'updatedAt'}
+        {"name": "created_at", "type": utils.parse_datetime, "path": "createdAt"},
+        "address",
+        "country",
+        "details",
+        {"name": "id", "type": int},
+        "ip",
+        {"name": "max_players", "path": "maxPlayers"},
+        "name",
+        {"name": "player_count", "path": "players"},
+        "port",
+        {"name": "query_port", "path": "portQuery"},
+        "private",
+        "rank",
+        "status",
+        {"name": "updated_at", "type": utils.parse_datetime, "path": "updatedAt"},
     )
 
+    # fmt: off
     address: Optional[str]        = field(hash=False, repr=False)
     country: str                  = field(hash=False, repr=False)
     created_at: datetime.datetime = field(hash=False, repr=False)
@@ -67,23 +75,23 @@ class Server(PayloadIniter):
     rank: int                     = field(hash=False, repr=False)
     status: str                   = field(hash=False, repr=False)
     updated_at: datetime.datetime = field(hash=False, repr=False)
+    # fmt: on
 
     def __init__(self, payload):
-        super().__setattr__('payload', types.MappingProxyType(payload))
+        super().__setattr__("payload", types.MappingProxyType(payload))
 
-        data = payload.get('data')
+        data = payload.get("data")
         if data:
-            attrs = data['attributes']
+            attrs = data["attributes"]
         else:
-            attrs = payload['attributes']
+            attrs = payload["attributes"]
 
         self.__init_attrs__(attrs, self.__init_attrs)
 
-        included = payload.get('included')
+        included = payload.get("included")
         players = ()
         if included:
             players = tuple(
-                Player(item) for item in included
-                if item['type'] == 'player'
+                Player(item) for item in included if item["type"] == "player"
             )
-        super().__setattr__('players', players)
+        super().__setattr__("players", players)

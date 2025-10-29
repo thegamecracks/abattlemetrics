@@ -6,10 +6,12 @@ import aiohttp
 
 TOKEN = None
 
-log = logging.getLogger('abattlemetrics')
+log = logging.getLogger("abattlemetrics")
 log.setLevel(logging.DEBUG)
-handler = logging.FileHandler('abattlemetrics.log', encoding='utf-8', mode='w')
-handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+handler = logging.FileHandler("abattlemetrics.log", encoding="utf-8", mode="w")
+handler.setFormatter(
+    logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s")
+)
 log.addHandler(handler)
 
 
@@ -21,5 +23,5 @@ async def main():
             print(p)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())

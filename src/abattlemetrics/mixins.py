@@ -8,8 +8,12 @@ class PayloadIniter:
     """
 
     def __init_attrs__(
-            self, attrs, mapping: Tuple[Union[str, dict], ...], *,
-            required=True):
+        self,
+        attrs,
+        mapping: Tuple[Union[str, dict], ...],
+        *,
+        required=True,
+    ):
         """Extract attributes into instance variables according to mapping.
 
         Each attr specified in mapping can be either a string, or a dictionary.
@@ -51,6 +55,7 @@ class PayloadIniter:
         Raises:
             KeyError: An attribute specified in mapping was missing from attrs.
         """
+
         def lookup(p):
             v = attrs
             for k in p:
@@ -58,7 +63,7 @@ class PayloadIniter:
                     v = v[k]
                 except (KeyError, TypeError):
                     if required:
-                        raise KeyError(f'attrs is missing {k!r} from {v!r}')
+                        raise KeyError(f"attrs is missing {k!r} from {v!r}")
                     return
             return v
 
@@ -68,7 +73,7 @@ class PayloadIniter:
             if isinstance(x, str):
                 super().__setattr__(x, lookup((x,)))
             else:
-                name, path = x['name'], x.get('path')
+                name, path = x["name"], x.get("path")
                 if path is None:
                     path = name
                 if isinstance(path, str):
@@ -77,15 +82,15 @@ class PayloadIniter:
                 try:
                     val = lookup(path)
                 except KeyError as e:
-                    val = x.get('default', missing)
+                    val = x.get("default", missing)
                     if val is missing:
-                        val = x.get('default_factory', missing)
+                        val = x.get("default_factory", missing)
                         if val is missing:
                             raise e
                         val = val()
 
-                conv = x.get('type')
+                conv = x.get("type")
                 if conv is not None:
                     val = conv(val)
 
-                super().__setattr__(x['name'], val)
+                super().__setattr__(x["name"], val)

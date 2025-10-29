@@ -19,14 +19,14 @@ from .player import IdentifierType, Player
 from .server import Server
 from . import __version__, utils
 
-__all__ = ('BattleMetricsClient',)
+__all__ = ("BattleMetricsClient",)
 
 log = logging.getLogger(__name__)
 
 
 async def _json_or_text(response):
-    text = await response.text(encoding='utf-8')
-    if response.headers.get('content-type') == 'application/json':
+    text = await response.text(encoding="utf-8")
+    if response.headers.get("content-type") == "application/json":
         return json.loads(text)
     return text
 
@@ -52,14 +52,16 @@ class _MaybeUnlock:
 
 
 class _Route:
-    BASE = 'https://api.battlemetrics.com'
+    BASE = "https://api.battlemetrics.com"
 
     def __init__(self, method, path, **params):
         self.path = path
         self.method = method
         url = self.BASE + path
         if params:
-            url = url.format(**{k: quote(v) if isinstance(v, str) else v for k, v in params.items()})
+            url = url.format(
+                **{k: quote(v) if isinstance(v, str) else v for k, v in params.items()}
+            )
         self.url = url
 
 
@@ -76,9 +78,10 @@ def _alias_param(name, alias):
             alias_value = kwargs.pop(alias, MISSING)
             if alias_value is not MISSING:
                 if name in kwargs:
-                    raise TypeError(f'Cannot pass both {name!r} and {alias!r} in call')
+                    raise TypeError(f"Cannot pass both {name!r} and {alias!r} in call")
                 kwargs[name] = alias_value
             return func(*args, **kwargs)
+
         return wrapper
 
     return deco
@@ -91,6 +94,7 @@ def _get_my_name():
 
 def _add_bucket(rate, per):
     """Apply a bucket to check when making an API request."""
+
     def deco(func):
         added_bucket = False
 
@@ -104,6 +108,7 @@ def _add_bucket(rate, per):
             return func(self, *args, **kwargs)
 
         return wrapper
+
     return deco
 
 
@@ -118,6 +123,7 @@ class BattleMetricsClient:
             sleeping or raising an error.
 
     """
+
     _Route = _Route
 
     def __init__(
@@ -125,32 +131,40 @@ class BattleMetricsClient:
         session: aiohttp.ClientSession,
         token: Optional[str] = None,
         *,
-        sleep_on_ratelimit: bool = True
+        sleep_on_ratelimit: bool = True,
     ):
         self.session = session
         self.token = token
         self.sleep_on_ratelimit = sleep_on_ratelimit
-        _user_agent = 'https://github.com/thegamecracks/abattlemetrics ({0}) Python/{1[0]}.{1[1]} aiohttp/{2}'
-        self._user_agent = _user_agent.format(__version__, sys.version_info, aiohttp.__version__)
+        _user_agent = "https://github.com/thegamecracks/abattlemetrics ({0}) Python/{1[0]}.{1[1]} aiohttp/{2}"
+        self._user_agent = _user_agent.format(
+            __version__,
+            sys.version_info,
+            aiohttp.__version__,
+        )
         self._reqlock = asyncio.Lock()
         self._buckets = {}
 
     async def _request(
-            self, route: _Route, *,
-            bucket: Optional[str] = None,
-            params: Optional[dict] = None,
-            **kwargs):
-        headers = {
-            'User-Agent': self._user_agent
-        }
+        self,
+        route: _Route,
+        *,
+        bucket: Optional[str] = None,
+        params: Optional[dict] = None,
+        **kwargs,
+    ):
+        headers = {"User-Agent": self._user_agent}
 
         if self.token:
-            headers['Authorization'] = f'Bearer {self.token}'
+            headers["Authorization"] = f"Bearer {self.token}"
 
-        if 'json' in kwargs:
-            headers['Content-Type'] = 'application/json'
-            kwargs['data'] = json.dumps(
-                kwargs.pop('json'), separators=(',', ':'), ensure_ascii=True)
+        if "json" in kwargs:
+            headers["Content-Type"] = "application/json"
+            kwargs["data"] = json.dumps(
+                kwargs.pop("json"),
+                separators=(",", ":"),
+                ensure_ascii=True,
+            )
 
         if params is None:
             params = {}
@@ -163,36 +177,43 @@ class BattleMetricsClient:
                     retry_after = bucket.get_retry_after()
                     if retry_after:
                         log.debug(
-                            '{0.method} {0.url} locally rate limited for {1:.2f}s'.format(
-                                route, retry_after)
+                            "{0.method} {0.url} locally rate limited for {1:.2f}s".format(
+                                route,
+                                retry_after,
+                            )
                         )
                         await asyncio.sleep(retry_after)
 
                 async with self.session.request(
-                        route.method, route.url,
-                        headers=headers, params=params, **kwargs) as r:
+                    route.method,
+                    route.url,
+                    headers=headers,
+                    params=params,
+                    **kwargs,
+                ) as r:
                     if bucket is not None:
                         bucket.update_rate_limit()
 
-                    log.debug(f'{route.method} {route.url} returned {r.status}')
+                    log.debug(f"{route.method} {route.url} returned {r.status}")
                     data = await _json_or_text(r)
 
-                    retry_after = r.headers.get('Retry-After', 0)
+                    retry_after = r.headers.get("Retry-After", 0)
                     retry_after = float(retry_after)
                     # NOTE: battlemetrics doesn't always give
                     # X-Rate-Limit-Remaining header
                     if retry_after:
                         if self.sleep_on_ratelimit:
-                            log.warning(f'Rate limited; retrying in {retry_after:.2f}')
+                            log.warning(f"Rate limited; retrying in {retry_after:.2f}")
                             await asyncio.sleep(retry_after)
-                            log.debug('Done sleeping for rate limit, retrying...')
+                            log.debug("Done sleeping for rate limit, retrying...")
                             continue
                         else:
                             e = HTTPException(r, data)
                             # unlock once rate limit is done
                             log.warning(
-                                'Rate limited; sleep_on_ratelimit '
-                                'is False, raising exception', exc_info=e
+                                "Rate limited; sleep_on_ratelimit "
+                                "is False, raising exception",
+                                exc_info=e,
                             )
                             lock.defer(retry_after)
                             raise e
@@ -200,8 +221,12 @@ class BattleMetricsClient:
                     if r.status != 200:
                         e = HTTPException(r, data)
                         log.exception(
-                            'Response %d caused with:\nRoute: %s %s\nParams: %s',
-                            r.status, route.method, route.path, params, exc_info=e
+                            "Response %d caused with:\nRoute: %s %s\nParams: %s",
+                            r.status,
+                            route.method,
+                            route.path,
+                            params,
+                            exc_info=e,
                         )
                         raise e
 
@@ -210,14 +235,15 @@ class BattleMetricsClient:
             # No more retries left
             raise HTTPException(r, data)
 
-    @_alias_param('stop', 'before')
-    @_alias_param('start', 'after')
+    @_alias_param("stop", "before")
+    @_alias_param("start", "after")
     async def get_player_count_history(
         self,
         server_id: int,
         *,
-        start: datetime.datetime, stop: datetime.datetime,
-        resolution: Optional[Resolution] = Resolution.RAW
+        start: datetime.datetime,
+        stop: datetime.datetime,
+        resolution: Optional[Resolution] = Resolution.RAW,
     ) -> List[DataPoint]:
         """Obtain a server's player count history.
 
@@ -240,19 +266,20 @@ class BattleMetricsClient:
             List[DataPoint]: A list of data points sorted by timestamp.
 
         """
-        r = _Route('GET', '/servers/{server_id}/player-count-history',
-                   server_id=int(server_id))
+        r = _Route(
+            "GET", "/servers/{server_id}/player-count-history", server_id=int(server_id)
+        )
 
         params = {
-            'start': utils.isoify_datetime(start),
-            'stop': utils.isoify_datetime(stop),
-            'resolution': resolution.value
+            "start": utils.isoify_datetime(start),
+            "stop": utils.isoify_datetime(stop),
+            "resolution": resolution.value,
         }
 
         payload = await self._request(r, params=params)
-        data = payload['data']
+        data = payload["data"]
 
-        datapoints = [DataPoint(d['attributes']) for d in data]
+        datapoints = [DataPoint(d["attributes"]) for d in data]
         datapoints.sort(key=lambda dp: dp.timestamp)
 
         return datapoints
@@ -286,36 +313,34 @@ class BattleMetricsClient:
         player_id = int(player_id)
 
         if limit < 1:
-            raise ValueError('limit must be at least 1')
+            raise ValueError("limit must be at least 1")
 
         params = {}
         if organization_ids:
-            params['filter[organizations]'] = ','.join([
-                str(int(n)) for n in organization_ids
-            ])
+            params["filter[organizations]"] = ",".join(
+                [str(int(n)) for n in organization_ids]
+            )
         if server_ids:
-            params['filter[servers]'] = ','.join([
-                str(int(n)) for n in server_ids
-            ])
+            params["filter[servers]"] = ",".join([str(int(n)) for n in server_ids])
 
         include = []
         if include_servers:
-            include.append('server')
-        include = ','.join(include)
+            include.append("server")
+        include = ",".join(include)
         if include:
-            params['include'] = include
+            params["include"] = include
 
         return AsyncSessionIterator(self, limit, player_id, params)
 
-    @_alias_param('stop', 'before')
-    @_alias_param('start', 'after')
+    @_alias_param("stop", "before")
+    @_alias_param("start", "after")
     async def get_player_time_played_history(
         self,
         player_id: int,
         server_id: int,
         *,
         start: datetime.datetime,
-        stop: datetime.datetime
+        stop: datetime.datetime,
     ) -> List[DataPoint]:
         """Obtain a player's time played history for a server.
 
@@ -338,18 +363,22 @@ class BattleMetricsClient:
                 Each data point is per day and their values are in seconds.
 
         """
-        r = _Route('GET', '/players/{player_id}/time-played-history/{server_id}',
-                   player_id=int(player_id), server_id=int(server_id))
+        r = _Route(
+            "GET",
+            "/players/{player_id}/time-played-history/{server_id}",
+            player_id=int(player_id),
+            server_id=int(server_id),
+        )
 
         params = {
-            'start': utils.isoify_datetime(start),
-            'stop': utils.isoify_datetime(stop)
+            "start": utils.isoify_datetime(start),
+            "stop": utils.isoify_datetime(stop),
         }
 
         payload = await self._request(r, params=params)
-        data = payload['data']
+        data = payload["data"]
 
-        datapoints = [DataPoint(d['attributes']) for d in data]
+        datapoints = [DataPoint(d["attributes"]) for d in data]
         datapoints.sort(key=lambda dp: dp.timestamp)
 
         return datapoints
@@ -371,7 +400,7 @@ class BattleMetricsClient:
         organization_id: Optional[int] = None,
         public: bool = True,
         search: Optional[str] = None,
-        server_ids: Optional[Iterable[int]] = None
+        server_ids: Optional[Iterable[int]] = None,
     ) -> AsyncPlayerListIterator:
         """Search records for players ordered by most recent.
 
@@ -433,68 +462,64 @@ class BattleMetricsClient:
         """
         limit = int(limit)
         if limit < 1:
-            raise ValueError('limit must be at least 1')
+            raise ValueError("limit must be at least 1")
 
-        params = {'sort': '-lastSeen'}
+        params = {"sort": "-lastSeen"}
         if countries:
-            params['filter[server][countries][]'] = [str(c) for c in countries]
+            params["filter[server][countries][]"] = [str(c) for c in countries]
         if distance:
             distance = int(distance)
             if distance < 0:
-                raise ValueError('distance cannot be negative')
-            params['filter[server][maxDistance]'] = distance
+                raise ValueError("distance cannot be negative")
+            params["filter[server][maxDistance]"] = distance
         if first_seen_after or first_seen_before:
-            p = 'after' if first_seen_after else 'before'
+            p = "after" if first_seen_after else "before"
             if not self.token:
-                raise ValueError(f'authentication required for first_seen_{p}')
+                raise ValueError(f"authentication required for first_seen_{p}")
             elif not server_ids:
                 # Will result in 500
-                raise ValueError(f'server_ids required for first_seen_{p}')
+                raise ValueError(f"server_ids required for first_seen_{p}")
 
-            params['filter[firstSeen]'] = '{}:{}'.format(
-                utils.isoify_datetime(first_seen_after) if first_seen_after else '',
-                utils.isoify_datetime(first_seen_before) if first_seen_before else ''
+            params["filter[firstSeen]"] = "{}:{}".format(
+                utils.isoify_datetime(first_seen_after) if first_seen_after else "",
+                utils.isoify_datetime(first_seen_before) if first_seen_before else "",
             )
         if game:
-            params['filter[server][game]'] = str(game)
+            params["filter[server][game]"] = str(game)
 
         include = []
         if include_identifiers:
-            include.append('identifier')
+            include.append("identifier")
         if include:
-            params['include'] = ','.join(include)
+            params["include"] = ",".join(include)
         if is_online:
-            params['filter[online]'] = 'true'
+            params["filter[online]"] = "true"
         if last_seen_after:
-            params['filter[after]'] = utils.isoify_datetime(last_seen_after)
+            params["filter[after]"] = utils.isoify_datetime(last_seen_after)
         if last_seen_before:
-            params['filter[before]'] = utils.isoify_datetime(last_seen_before)
+            params["filter[before]"] = utils.isoify_datetime(last_seen_before)
         if online_at:
             if public:
-                raise ValueError('public=False required for online_at')
-            params['filter[sessions][at]'] = utils.isoify_datetime(online_at)
+                raise ValueError("public=False required for online_at")
+            params["filter[sessions][at]"] = utils.isoify_datetime(online_at)
         if organization_id:
             if not self.token:
-                raise ValueError('authentication required for organization_id')
-            params['filter[organization]'] = int(organization_id)
+                raise ValueError("authentication required for organization_id")
+            params["filter[organization]"] = int(organization_id)
         if not public:
             if not self.token:
-                raise ValueError('authentication required for public=False')
-            params['filter[public]'] = 'false'  # API defaults to true
+                raise ValueError("authentication required for public=False")
+            params["filter[public]"] = "false"  # API defaults to true
         if search:
-            params['filter[search]'] = str(search)
+            params["filter[search]"] = str(search)
         if server_ids:
-            params['filter[servers]'] = ','.join([
-                str(int(n)) for n in server_ids
-            ])
+            params["filter[servers]"] = ",".join([str(int(n)) for n in server_ids])
 
         return AsyncPlayerListIterator(self, limit, params)
 
     @_add_bucket(1, 1)
     async def match_players(
-        self,
-        *identifiers: Union[int, str],
-        type: IdentifierType
+        self, *identifiers: Union[int, str], type: IdentifierType
     ) -> Dict[Union[int, str], Optional[int]]:
         """Get the player IDs associated with the given identifiers.
 
@@ -515,29 +540,27 @@ class BattleMetricsClient:
                 Unmatched identifiers are mapped to None.
 
         """
+
         def transfer_type(x):
             return identifier_types[x](x)
 
         if not identifiers:
-            raise TypeError('At least 1 identifier must be given')
+            raise TypeError("At least 1 identifier must be given")
         elif len(identifiers) > 100:
-            raise ValueError('Only 100 identifiers can be requested at once')
+            raise ValueError("Only 100 identifiers can be requested at once")
 
-        r = _Route('POST', '/players/match')
+        r = _Route("POST", "/players/match")
         data = {
-            'data': [
+            "data": [
                 {
-                    'type': 'identifier',
-                    'attributes': {
-                        'type': type.value,
-                        'identifier': str(i)
-                    }
+                    "type": "identifier",
+                    "attributes": {"type": type.value, "identifier": str(i)},
                 }
                 for i in identifiers
             ]
         }
         payload = await self._request(r, json=data, bucket=_get_my_name())
-        data = payload['data']
+        data = payload["data"]
         if not data:
             return {}
 
@@ -545,8 +568,8 @@ class BattleMetricsClient:
 
         results = dict.fromkeys(identifiers)
         for d in data:
-            i = transfer_type(d['attributes']['identifier'])
-            results[i] = int(d['relationships']['player']['data']['id'])
+            i = transfer_type(d["attributes"]["identifier"])
+            results[i] = int(d["relationships"]["player"]["data"]["id"])
         return results
 
     async def get_player_info(self, player_id: int) -> Player:
@@ -559,16 +582,11 @@ class BattleMetricsClient:
             Player
 
         """
-        r = _Route('GET', '/players/{player_id}', player_id=int(player_id))
+        r = _Route("GET", "/players/{player_id}", player_id=int(player_id))
         payload = await self._request(r)
-        return Player(payload['data'])
+        return Player(payload["data"])
 
-    async def get_server_info(
-        self,
-        server_id: int,
-        *,
-        include_players=False
-    ) -> Server:
+    async def get_server_info(self, server_id: int, *, include_players=False) -> Server:
         """Obtain server info given an ID.
 
         Args:
@@ -580,16 +598,16 @@ class BattleMetricsClient:
             Server
 
         """
-        r = _Route('GET', '/servers/{server_id}', server_id=int(server_id))
+        r = _Route("GET", "/servers/{server_id}", server_id=int(server_id))
 
         params = {}
 
         include = []
         if include_players:
-            include.append('player')
+            include.append("player")
 
-        include = ','.join(include)
+        include = ",".join(include)
         if include:
-            params['include'] = include
+            params["include"] = include
 
         return Server(await self._request(r, params=params))

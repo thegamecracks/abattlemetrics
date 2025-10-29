@@ -1,6 +1,6 @@
 import time
 
-__all__ = ('Limiter',)
+__all__ = ("Limiter",)
 
 
 class Limiter:
@@ -11,7 +11,8 @@ class Limiter:
         per (float): How fast the tokens are restored in seconds.
 
     """
-    __slots__ = ('rate', 'per', 'leak_rate', '_last', '_tokens')
+
+    __slots__ = ("rate", "per", "leak_rate", "_last", "_tokens")
 
     def __init__(self, rate, per):
         self.rate = int(rate)

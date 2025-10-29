@@ -7,7 +7,7 @@ from .player import Player
 from .session import Session
 from .server import Server
 
-__all__ = ('AsyncIterator', 'AsyncPlayerListIterator', 'AsyncSessionIterator')
+__all__ = ("AsyncIterator", "AsyncPlayerListIterator", "AsyncSessionIterator")
 
 log = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ class AsyncPaginatedIterator(AsyncIterator):
         self._current_page = None
 
     def _get_next_params(self, r: dict) -> Optional[dict]:
-        params = r['links'].get('next')
+        params = r["links"].get("next")
         if params:
             return urlparse.parse_qs(urlparse.urlparse(params).query)
 
@@ -86,7 +86,7 @@ class AsyncPaginatedIterator(AsyncIterator):
         if self._current_page:
             return self._current_page.pop()
         elif self._params is not None:
-            self._params['page[size]'] = min(self._limit, self._MAX_SIZE)
+            self._params["page[size]"] = min(self._limit, self._MAX_SIZE)
             await self._request_page(self._params)
 
         if self._current_page:
@@ -97,55 +97,51 @@ class AsyncPaginatedIterator(AsyncIterator):
 
 class AsyncPlayerListIterator(AsyncPaginatedIterator):
     def __init__(self, client, limit, params):
-        route = client._Route('GET', '/players')
+        route = client._Route("GET", "/players")
         super().__init__(client, route, limit, params)
 
     async def _request_page(self, params):
-        log.debug('Requesting %d players listed', params['page[size]'])
+        log.debug("Requesting %d players listed", params["page[size]"])
         await super()._request_page(params)
 
     async def _parse_response(self, r) -> List[Player]:
         identifiers = collections.defaultdict(list)
-        for payload in r['included']:
-            if payload['type'] == 'identifier':
-                p_id = int(payload['relationships']['player']['data']['id'])
+        for payload in r["included"]:
+            if payload["type"] == "identifier":
+                p_id = int(payload["relationships"]["player"]["data"]["id"])
                 identifiers[p_id].append(payload)
 
         return [
-            Player(
-                payload,
-                identifiers.get(int(payload['id']), None)
-            )
-            for payload in r['data']
+            Player(payload, identifiers.get(int(payload["id"]), None))
+            for payload in r["data"]
         ]
 
 
 class AsyncSessionIterator(AsyncPaginatedIterator):
     def __init__(self, client, limit, player_id, params):
         route = client._Route(
-            'GET', '/players/{player_id}/relationships/sessions',
-            player_id=player_id
+            "GET", "/players/{player_id}/relationships/sessions", player_id=player_id
         )
         super().__init__(client, route, limit, params)
 
     async def _request_page(self, params):
-        log.debug('Requesting %d sessions', params['page[size]'])
+        log.debug("Requesting %d sessions", params["page[size]"])
         await super()._request_page(params)
 
     async def _parse_response(self, r) -> List[Session]:
         servers = {
-            payload['attributes']['id']: Server(payload)
-            for payload in r['included']
-            if payload['type'] == 'server'
+            payload["attributes"]["id"]: Server(payload)
+            for payload in r["included"]
+            if payload["type"] == "server"
         }
 
         page = []
-        for payload in r['data']:
+        for payload in r["data"]:
             session = Session(payload)
 
             server = servers.get(session.server_id)
             if server is not None:
-                super(Session, session).__setattr__('server', server)
+                super(Session, session).__setattr__("server", server)
 
             page.append(session)
 

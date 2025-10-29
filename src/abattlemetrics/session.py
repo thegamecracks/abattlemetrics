@@ -8,7 +8,7 @@ from .mixins import PayloadIniter
 from .server import Server
 from . import utils
 
-__all__ = ('Session',)
+__all__ = ("Session",)
 
 
 def _parse_optional_datetime(date_string: Optional[str]):
@@ -41,21 +41,34 @@ class Session(PayloadIniter):
         Battlemetrics may occasionally not provide this date.
 
     """
-    __init_attrs = (
-        {'name': 'first_time', 'path': ('attributes', 'firstTime')},
-        'id',
-        {'name': 'player_id', 'type': int,
-         'path': ('relationships', 'player', 'data', 'id')},
-        {'name': 'player_name', 'path': ('attributes', 'name')},
-        {'name': 'server_id', 'type': int,
-         'path': ('relationships', 'server', 'data', 'id')},
-        {'name': 'start', 'type': _parse_optional_datetime,
-         'path': ('attributes', 'start')},
-        {'name': 'stop', 'type': _parse_optional_datetime,
-         'path': ('attributes', 'stop')}
 
+    __init_attrs = (
+        {"name": "first_time", "path": ("attributes", "firstTime")},
+        "id",
+        {
+            "name": "player_id",
+            "type": int,
+            "path": ("relationships", "player", "data", "id"),
+        },
+        {"name": "player_name", "path": ("attributes", "name")},
+        {
+            "name": "server_id",
+            "type": int,
+            "path": ("relationships", "server", "data", "id"),
+        },
+        {
+            "name": "start",
+            "type": _parse_optional_datetime,
+            "path": ("attributes", "start"),
+        },
+        {
+            "name": "stop",
+            "type": _parse_optional_datetime,
+            "path": ("attributes", "stop"),
+        },
     )
 
+    # fmt: off
     first_time: bool                   = field(hash=False, repr=False)
     id: str
     payload: dict                      = field(hash=False, repr=False)
@@ -65,9 +78,10 @@ class Session(PayloadIniter):
     server_id: int                     = field(hash=False)
     start: Optional[datetime.datetime] = field(hash=False, repr=False)
     stop: Optional[datetime.datetime]  = field(hash=False, repr=False)
+    # fmt: on
 
     def __init__(self, payload):
-        super().__setattr__('payload', types.MappingProxyType(payload))
+        super().__setattr__("payload", types.MappingProxyType(payload))
         # NOTE: server is manually assigned by AsyncSessionIterator
 
         self.__init_attrs__(payload, self.__init_attrs)

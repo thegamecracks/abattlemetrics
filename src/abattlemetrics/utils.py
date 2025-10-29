@@ -7,7 +7,7 @@ def isoify_datetime(dt: datetime.datetime) -> str:
     """Turn a datetime into a ISO formatted string in UTC suitable
     for parameters."""
     dt = dt.astimezone(datetime.timezone.utc)
-    return dt.replace(microsecond=0, tzinfo=None).isoformat() + 'Z'
+    return dt.replace(microsecond=0, tzinfo=None).isoformat() + "Z"
 
 
 def parse_datetime(date_string: str) -> datetime.datetime:
