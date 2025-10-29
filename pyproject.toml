@@ -1,3 +1,33 @@
 [build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+requires = ["uv-build~=0.9.5"]
+build-backend = "uv_build"
+
+[project]
+name = "abattlemetrics"
+version = "0.6.0.post1"
+description = "An asyncio wrapper for the battlemetrics API."
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "thegamecracks" }]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: AsyncIO",
+    "Framework :: aiohttp",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Typing :: Typed",
+]
+dependencies = [
+    "aiohttp",
+    "python-dateutil",
+]
+
+[project.urls]
+# https://packaging.python.org/en/latest/specifications/well-known-project-urls/#well-known-labels
+Homepage = "https://github.com/thegamecracks/abattlemetrics"
+GitHub = "https://github.com/thegamecracks/abattlemetrics"
+Issues = "https://github.com/thegamecracks/abattlemetrics/issues"
