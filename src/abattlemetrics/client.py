@@ -17,7 +17,7 @@ from .iterators import AsyncPlayerListIterator, AsyncSessionIterator
 from .limiter import Limiter
 from .player import IdentifierType, Player
 from .server import Server
-from . import __version__, utils
+from . import utils
 
 __all__ = ("BattleMetricsClient",)
 
@@ -136,14 +136,24 @@ class BattleMetricsClient:
         self.session = session
         self.token = token
         self.sleep_on_ratelimit = sleep_on_ratelimit
-        _user_agent = "https://github.com/thegamecracks/abattlemetrics ({0}) Python/{1[0]}.{1[1]} aiohttp/{2}"
-        self._user_agent = _user_agent.format(
+        self._user_agent = self._get_user_agent()
+        self._reqlock = asyncio.Lock()
+        self._buckets = {}
+
+    @staticmethod
+    def _get_user_agent() -> str:
+        from . import __version__
+
+        user_agent = (
+            "https://github.com/thegamecracks/abattlemetrics "
+            "({0}) Python/{1[0]}.{1[1]} aiohttp/{2}"
+        )
+
+        return user_agent.format(
             __version__,
             sys.version_info,
             aiohttp.__version__,
         )
-        self._reqlock = asyncio.Lock()
-        self._buckets = {}
 
     async def _request(
         self,
