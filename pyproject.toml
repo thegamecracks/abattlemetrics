@@ -22,8 +22,8 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "aiohttp",
-    "python-dateutil",
+    "aiohttp>=3.8.1",
+    "python-dateutil>=2.8.2",
 ]
 
 [project.urls]
